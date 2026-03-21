@@ -19,7 +19,8 @@
     "dash": "tsx dashboard/server.ts",
     "mcp": "tsx packages/mcp/src/server.ts",
     "api": "tsx packages/api/src/server.ts",
-    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json"
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json",
+    "start": "npm run build && node packages/api/dist/server.js"
   },
   "devDependencies": {
     "tsx": "^4.0.0",
