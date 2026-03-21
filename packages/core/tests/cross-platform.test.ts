@@ -9,68 +9,62 @@ describe('Cross-Platform Immunity', () => {
   let geneMap: GeneMap;
 
   beforeEach(() => {
-    geneMap = new GeneMap(':memory:');
+    geneMap = new GeneMap(':memory:'); // seeds automatically
     engine = new PcecEngine(geneMap, 'xplat-test', { mode: 'auto' });
     for (const adapter of defaultAdapters) engine.registerAdapter(adapter);
     bus.clear();
   });
-
   afterEach(() => { geneMap.close(); });
 
-  it('Tempo nonce fix immunizes Privy nonce desync', async () => {
-    const tempoError = new Error('Transaction signature invalid: nonce mismatch (expected 42, got 41)');
-    (tempoError as any).code = 'verification-failed';
-    const r1 = await engine.repair(tempoError);
-    expect(r1.success).toBe(true);
-    expect(r1.immune).toBe(false);
-
+  it('seed genes provide cross-platform immunity from day 1', async () => {
+    // Seed gene for verification-failed/signature covers [tempo, privy, coinbase]
+    // A new Privy nonce error should be IMMUNE immediately
     const privyError = new Error('Transaction nonce mismatch: wallet internal nonce=47 but chain nonce=45');
-    const r2 = await engine.repair(privyError);
-    expect(r2.success).toBe(true);
-    expect(r2.immune).toBe(true);
+    const r = await engine.repair(privyError);
+    expect(r.success).toBe(true);
+    expect(r.immune).toBe(true);
   });
 
-  it('Tempo balance fix immunizes Privy gas sponsor', async () => {
-    const tempoError = new Error('Gas sponsor wallet exhausted — agent cannot submit transactions');
-    (tempoError as any).code = 'payment-insufficient';
-    await engine.repair(tempoError);
-
-    const privyError = new Error('Privy automated gas sponsorship balance depleted');
-    const r2 = await engine.repair(privyError);
-    expect(r2.success).toBe(true);
-    expect(r2.immune).toBe(true);
-  });
-
-  it('Tempo network fix immunizes Privy cross-chain', async () => {
-    const tempoError = new Error('Uninitialized token account: USDC not deployed on Tempo testnet');
-    (tempoError as any).code = 'token-uninitialized';
-    await engine.repair(tempoError);
-
+  it('Tempo network fix immunizes Privy cross-chain (via seed gene)', async () => {
+    // Seed gene for token-uninitialized/network covers [tempo, privy, coinbase]
     const privyError = new Error('Privy wallet wlt_stu901 is provisioned on Ethereum mainnet but transaction targets Tempo chain (chainId: 42069). Cannot sign for mismatched chain');
-    const r2 = await engine.repair(privyError);
-    expect(r2.success).toBe(true);
-    expect(r2.immune).toBe(true);
+    const r = await engine.repair(privyError);
+    expect(r.success).toBe(true);
+    expect(r.immune).toBe(true);
+    // Gene should already have privy in platforms from seed
+    expect(r.gene!.platforms).toContain('privy');
   });
 
-  it('does NOT cross-immunize unrelated categories', async () => {
-    const tempoError = new Error('Payment of 500 USDC failed: insufficient balance');
-    (tempoError as any).code = 'payment-insufficient';
-    await engine.repair(tempoError);
-
-    const privyError = new Error('Transaction nonce mismatch: wallet internal nonce=47 but chain nonce=45');
-    const r2 = await engine.repair(privyError);
-    expect(r2.immune).toBe(false);
+  it('Coinbase AA25 uses same nonce gene as Tempo/Privy', async () => {
+    const cbError = new Error('EntryPoint revert: AA25 Invalid account nonce');
+    const r = await engine.repair(cbError);
+    expect(r.success).toBe(true);
+    expect(r.immune).toBe(true);
+    expect(r.gene!.platforms).toContain('coinbase');
   });
 
-  it('updates gene platforms array on cross-platform hit', async () => {
-    const tempoError = new Error('Uninitialized token account: USDC not deployed on Tempo testnet');
-    (tempoError as any).code = 'token-uninitialized';
-    await engine.repair(tempoError);
+  it('does NOT immunize truly unknown categories', async () => {
+    // Use an error that maps to a category with no seed gene
+    const error = new Error('Agent chain A→B→C: agent C payment failed, waterfall refund needed');
+    (error as any).code = 'cascade-failure';
+    const r = await engine.repair(error);
+    // cascade-failure IS NOT in seed genes
+    expect(r.immune).toBe(false);
+  });
 
-    const privyError = new Error('Privy wallet wlt_stu901 is provisioned on Ethereum mainnet but transaction targets Tempo chain (chainId: 42069). Cannot sign for mismatched chain');
-    const r2 = await engine.repair(privyError);
-    expect(r2.immune).toBe(true);
-    expect(r2.gene!.platforms).toContain('tempo');
-    expect(r2.gene!.platforms).toContain('privy');
+  it('updates gene platforms on cross-platform hit', async () => {
+    // Store a gene with only platform: ['test-only']
+    geneMap.store({
+      failureCode: 'offramp-failed', category: 'offramp', strategy: 'switch_offramp',
+      params: {}, successCount: 3, avgRepairMs: 200, platforms: ['test-only'],
+      qValue: 0.7, consecutiveFailures: 0,
+    });
+    // Trigger with a different platform
+    const err = new Error('Bank transfer to IBAN DE89... failed: provider Moonpay returned error 503');
+    (err as any).code = 'offramp-failed';
+    const r = await engine.repair(err);
+    expect(r.immune).toBe(true);
+    expect(r.gene!.platforms).toContain('test-only');
+    expect(r.gene!.platforms).toContain('tempo');
   });
 });

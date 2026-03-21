@@ -55,6 +55,7 @@ export interface FailureClassification {
   platform: Platform;
   details: string;
   timestamp: number;
+  rootCauseHint?: string;
   actualBalance?: number;
   requiredAmount?: number;
   chainId?: number;

@@ -13,6 +13,7 @@ import type {
   WrapOptions,
 } from './types.js';
 import { REVENUE_AT_RISK } from './types.js';
+import { getRootCause } from './root-causes.js';
 
 // Category C strategies that move funds — require 'full' mode
 const FUND_MOVEMENT_STRATEGIES = [
@@ -100,7 +101,11 @@ export class PcecEngine {
     }
     for (const adapter of this.adapters) {
       const result = adapter.perceive(error, context);
-      if (result) return result;
+      if (result) {
+        const rc = getRootCause(result.code, result.category);
+        if (rc) result.rootCauseHint = rc.hint;
+        return result;
+      }
     }
     return {
       code: 'unknown', category: 'unknown', severity: 'medium',
@@ -289,9 +294,13 @@ export class PcecEngine {
       allScores: scored.map(c => ({ strategy: c.strategy, score: c.score })),
     });
 
-    // ── BUILD EXPLANATION ──
+    // ── BUILD EXPLANATION (with root cause hints OPT-7) ──
+    const rootCause = getRootCause(failure.code, failure.category);
     const explanation = [
       `Perceived: ${failure.code} → ${failure.category} [${failure.severity}] (${failure.platform})`,
+      rootCause ? `Root cause: ${rootCause.likelyCause}` : '',
+      rootCause ? `Suggested: ${rootCause.suggestedAction}` : '',
+      rootCause?.isLikelySystematic ? '⚠️ Likely systematic — check configuration.' : '',
       `Candidates: ${scored.map(c => `${c.strategy}(${c.score})`).join(', ')}`,
       `Selected: ${winner.strategy} (score: ${winner.score})`,
       skippedStrategies.length > 0 ? `Skipped: ${skippedStrategies.join(', ')}` : '',
@@ -315,7 +324,20 @@ export class PcecEngine {
       });
     }
 
+    // ── IDEMPOTENCY CHECK (D5) ──
+    const inProgress = this.geneMap.checkRepairInProgress(failure.code, failure.category);
+    if (inProgress.inProgress) {
+      return makeResult({
+        success: !!inProgress.txHash, mode, failure, candidates: scored, winner,
+        explanation: explanation + `\nIdempotency: repair already ${inProgress.txHash ? 'completed' : 'in progress'} (${inProgress.repairId})`,
+        verified: !!inProgress.txHash,
+        costEstimate: winner.estimatedCostUsd, skippedStrategies,
+      });
+    }
+
     // ── COMMIT ──
+    const repairId = this.geneMap.generateRepairId();
+    this.geneMap.logRepairStart(repairId, failure.code, failure.category, winner.strategy);
     const commitResult = await this.provider.execute(winner.strategy, failure, context);
     const totalMs = Date.now() - start;
     const revenue = REVENUE_AT_RISK[failure.category] ?? 50;
@@ -333,6 +355,9 @@ export class PcecEngine {
       this.stats.repairs++;
       this.stats.savedRevenue += revenue;
       this.cycleCount = 0;
+
+      const txHash = commitResult.overrides.txHash as string | undefined;
+      this.geneMap.logRepairComplete(repairId, txHash);
 
       const gene: GeneCapsule = {
         failureCode: failure.code, category: failure.category,
@@ -364,6 +389,7 @@ export class PcecEngine {
     }
 
     // Verify failed
+    this.geneMap.logRepairFailed(repairId);
     if (existingGene) {
       this.geneMap.recordFailure(failure.code, failure.category);
     }

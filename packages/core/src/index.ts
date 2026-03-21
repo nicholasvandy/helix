@@ -34,3 +34,6 @@ export { evaluate } from './engine/evaluate.js';
 export { HelixProvider } from './engine/provider.js';
 export { getDexPreset, DEX_PRESETS } from './engine/dex-presets.js';
 export { registerShutdownHandler } from './engine/lifecycle.js';
+export { getRootCause } from './engine/root-causes.js';
+export type { RootCause } from './engine/root-causes.js';
+export { SEED_GENES } from './engine/seed-genes.js';
