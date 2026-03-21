@@ -90,7 +90,7 @@ app.get('/openapi.json', (_req, res) => {
       title: 'Helix',
       version: '0.1.0',
       description: 'AI Payment Repair Intelligence — diagnose and auto-repair payment failures for AI agents across Tempo, Privy, Coinbase, and any HTTP service. 31 scenarios, 25 strategies, cross-platform Gene immunity.',
-      guidance: 'Use POST /v1/diagnose to classify a payment error and get a repair recommendation. Send JSON body with "error" (string) and optional "context" (object). Use POST /v1/repair for diagnosis + execution. Free endpoints: GET /v1/status, GET /v1/platforms, GET /v1/check/:code/:category, GET /health.',
+      guidance: 'Use POST /v1/diagnose to classify a payment error and get a repair recommendation. Send JSON body with "error" (string) and optional "context" (object). Use POST /v1/repair for diagnosis + execution. Free endpoints: GET /v1/status, GET /v1/platforms, GET /health.',
     },
     paths: {
       '/v1/diagnose': {
@@ -98,8 +98,35 @@ app.get('/openapi.json', (_req, res) => {
           operationId: 'diagnose',
           summary: 'Diagnose a payment error and recommend repair strategy',
           tags: ['Repair'],
-          'x-payment-info': { pricingMode: 'fixed', price: '0.001000', protocols: ['mpp', 'x402'] },
-          'x-bazaar': { schema: { properties: { input: { type: 'object', properties: { error: { type: 'string', description: 'Error message from failed payment' }, context: { type: 'object', description: 'Optional context' } }, required: ['error'] }, output: { type: 'object', properties: { success: { type: 'boolean' }, diagnosis: { type: 'object' }, recommendation: { type: 'object' }, immune: { type: 'boolean' }, explanation: { type: 'string' } } } } } },
+          'x-payment-info': {
+            pricingMode: 'fixed',
+            price: '0.001000',
+            protocols: ['mpp', 'x402'],
+            authMode: 'payment',
+            resource: {
+              type: 'object',
+              properties: {
+                input: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string', description: 'Error message from failed payment' },
+                    context: { type: 'object', description: 'Optional context: agentId, walletAddress, chainId' },
+                  },
+                  required: ['error'],
+                },
+                output: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', description: 'Whether diagnosis succeeded' },
+                    diagnosis: { type: 'object', properties: { code: { type: 'string' }, category: { type: 'string' }, severity: { type: 'string' }, platform: { type: 'string' } } },
+                    recommendation: { type: 'object', properties: { strategy: { type: 'string' }, description: { type: 'string' }, confidence: { type: 'number' }, estimatedCostUsd: { type: 'number' }, estimatedSpeedMs: { type: 'number' } } },
+                    immune: { type: 'boolean' },
+                    explanation: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
           requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { error: { type: 'string', minLength: 1, description: 'The error message from the failed payment' }, context: { type: 'object', description: 'Optional context: agentId, walletAddress, chainId, etc.' } }, required: ['error'] } } } },
           responses: { '200': { description: 'Diagnosis result with recommended strategy', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, diagnosis: { type: 'object' }, recommendation: { type: 'object' }, immune: { type: 'boolean' }, explanation: { type: 'string' } } } } } }, '402': { description: 'Payment Required' } },
         },
@@ -109,15 +136,43 @@ app.get('/openapi.json', (_req, res) => {
           operationId: 'repair',
           summary: 'Diagnose and execute a payment repair',
           tags: ['Repair'],
-          'x-payment-info': { pricingMode: 'fixed', price: '0.001000', protocols: ['mpp', 'x402'] },
-          'x-bazaar': { schema: { properties: { input: { type: 'object', properties: { error: { type: 'string', description: 'Error message from failed payment' }, context: { type: 'object', description: 'Optional context' } }, required: ['error'] }, output: { type: 'object', properties: { success: { type: 'boolean' }, repaired: { type: 'boolean' }, strategy: { type: 'string' }, verified: { type: 'boolean' }, explanation: { type: 'string' } } } } } },
+          'x-payment-info': {
+            pricingMode: 'fixed',
+            price: '0.001000',
+            protocols: ['mpp', 'x402'],
+            authMode: 'payment',
+            resource: {
+              type: 'object',
+              properties: {
+                input: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string', description: 'Error message from failed payment' },
+                    context: { type: 'object', description: 'Optional context' },
+                  },
+                  required: ['error'],
+                },
+                output: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    repaired: { type: 'boolean' },
+                    strategy: { type: 'string' },
+                    verified: { type: 'boolean' },
+                    explanation: { type: 'string' },
+                    totalMs: { type: 'number' },
+                  },
+                },
+              },
+            },
+          },
           requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { error: { type: 'string', minLength: 1, description: 'The error message from the failed payment' }, context: { type: 'object', description: 'Optional context' } }, required: ['error'] } } } },
           responses: { '200': { description: 'Repair result', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, repaired: { type: 'boolean' }, strategy: { type: 'string' }, verified: { type: 'boolean' }, explanation: { type: 'string' } } } } } }, '402': { description: 'Payment Required' } },
         },
       },
-      '/v1/status': { get: { operationId: 'status', summary: 'Gene Map health status', tags: ['Info'], 'x-auth-mode': 'none', responses: { '200': { description: 'Gene Map statistics', content: { 'application/json': { schema: { type: 'object' } } } } } } },
-      '/v1/platforms': { get: { operationId: 'platforms', summary: 'List supported platforms and scenario counts', tags: ['Info'], 'x-auth-mode': 'none', responses: { '200': { description: 'Platform list', content: { 'application/json': { schema: { type: 'object' } } } } } } },
-      '/health': { get: { operationId: 'health', summary: 'Health check', tags: ['Info'], 'x-auth-mode': 'none', responses: { '200': { description: 'Service health', content: { 'application/json': { schema: { type: 'object' } } } } } } },
+      '/v1/status': { get: { operationId: 'status', summary: 'Gene Map health status', tags: ['Info'], 'x-payment-info': { authMode: 'none' }, responses: { '200': { description: 'Gene Map statistics', content: { 'application/json': { schema: { type: 'object' } } } } } } },
+      '/v1/platforms': { get: { operationId: 'platforms', summary: 'List supported platforms and scenario counts', tags: ['Info'], 'x-payment-info': { authMode: 'none' }, responses: { '200': { description: 'Platform list', content: { 'application/json': { schema: { type: 'object' } } } } } } },
+      '/health': { get: { operationId: 'health', summary: 'Health check', tags: ['Info'], 'x-payment-info': { authMode: 'none' }, responses: { '200': { description: 'Service health', content: { 'application/json': { schema: { type: 'object' } } } } } } },
     },
   });
 });
