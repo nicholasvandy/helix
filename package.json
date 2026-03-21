@@ -20,7 +20,10 @@
     "mcp": "tsx packages/mcp/src/server.ts",
     "api": "tsx packages/api/src/server.ts",
     "typecheck": "tsc --noEmit -p packages/core/tsconfig.json",
-    "start": "node packages/api/dist/server.js"
+    "start": "node packages/api/dist/server.js",
+    "e2e:setup": "bash examples/e2e-agent/setup.sh",
+    "e2e": "tsx examples/e2e-agent/agent.ts",
+    "e2e:zero": "tsx examples/real-e2e/zero-eth-test.ts"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

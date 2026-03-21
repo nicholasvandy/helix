@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helix × Coinbase — Self-Healing Payment Infrastructure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c12; --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.08);
+    --amber: #f59e0b; --green: #10b981; --red: #ef4444; --blue: #3b82f6; --purple: #8b5cf6;
+    --text: #c8cad0; --text-dim: #5a5e6a; --text-bright: #eaecf0;
+    --sans: 'Sora', sans-serif; --mono: 'JetBrains Mono', monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); line-height:1.6; -webkit-font-smoothing:antialiased; }
+  nav { position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(10,12,18,0.85); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:0 32px; height:52px; display:flex; align-items:center; gap:24px; font-size:13px; }
+  nav a { color:var(--text-dim); text-decoration:none; font-weight:500; transition:color .2s; }
+  nav a:hover { color:var(--text-bright); }
+  nav a.active { color:var(--amber); font-weight:700; }
+  .container { max-width:1080px; margin:0 auto; padding:80px 24px 48px; }
+  h2 { font-size:22px; font-weight:700; color:var(--text-bright); margin-bottom:6px; }
+  .sub { font-size:13px; color:var(--text-dim); margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  code { font-family:var(--mono); font-size:11px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { text-align:left; padding:8px 12px; color:var(--text-dim); font-weight:600; border-bottom:1px solid var(--border); }
+  td { padding:8px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .code-block { background:rgba(0,0,0,0.4); border:1px solid var(--border); border-radius:10px; padding:16px 20px; font-family:var(--mono); font-size:11.5px; line-height:1.8; overflow-x:auto; color:var(--text); }
+  section { margin-bottom:48px; }
+  footer { text-align:center; padding:32px 0; font-size:12px; color:var(--text-dim); border-top:1px solid var(--border); margin-top:24px; }
+  .tag { display:inline-block; padding:3px 10px; border-radius:6px; font-size:11px; font-family:var(--mono); margin:3px 2px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/">Dashboard</a>
+  <a href="/docs">Docs</a>
+  <a href="/benchmark">Benchmark</a>
+  <a href="/milestone">Milestone</a>
+  <a href="/insights">Insights</a>
+  <a href="/coinbase-demo" class="active">Coinbase Demo</a>
+</nav>
+
+<div class="container">
+
+<!-- ═══════ HERO ═══════ -->
+<section style="text-align:center;padding:40px 0 32px;">
+  <h1 style="font-size:38px;font-weight:800;color:var(--text-bright);margin-bottom:8px;">Helix <span style="color:var(--blue);">&times;</span> Coinbase</h1>
+  <p style="font-size:16px;color:var(--text-dim);max-width:560px;margin:0 auto 24px;">Self-Healing Payment Infrastructure for CDP, Paymaster, and x402</p>
+  <div style="display:flex;justify-content:center;gap:32px;font-size:13px;color:var(--text-dim);">
+    <span><b style="color:var(--amber);">32</b> error patterns</span>
+    <span><b style="color:var(--green);">9</b> cross-platform immunities</span>
+    <span><b style="color:var(--purple);">5</b> MCP tools</span>
+  </div>
+</section>
+
+<!-- ═══════ ERROR WALL ═══════ -->
+<section>
+  <h2>Error Wall</h2>
+  <p class="sub">Every failure Helix recognises across the Coinbase stack.</p>
+  <div class="grid3" style="align-items:start;">
+    <!-- CDP -->
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:12px;">CDP API</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">rate_limit_exceeded</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">faucet_limit</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">timed_out</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">internal_server_error</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">transfer_quote_expired</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">transfer_amount_out_of_bounds</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">malformed_transaction</div>
+      <div class="tag" style="background:rgba(59,130,246,0.08);color:var(--blue);">idempotency_error</div>
+    </div>
+    <!-- Paymaster -->
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--purple);margin-bottom:12px;">Paymaster / ERC-4337</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">GAS_ESTIMATION_ERROR</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">AA25 Invalid nonce</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">EXECUTION_REVERTED</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">AA21 prefund</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">AA13 initCode</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">max per user op limit</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">max monthly org limit</div>
+      <div class="tag" style="background:rgba(139,92,246,0.08);color:var(--purple);">SHORT_DEADLINE</div>
+    </div>
+    <!-- x402 -->
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:12px;">x402 Protocol</div>
+      <div class="tag" style="background:rgba(245,158,11,0.08);color:var(--amber);">insufficient USDC</div>
+      <div class="tag" style="background:rgba(245,158,11,0.08);color:var(--amber);">wrong network</div>
+      <div class="tag" style="background:rgba(245,158,11,0.08);color:var(--amber);">scheme not registered</div>
+      <div class="tag" style="background:rgba(245,158,11,0.08);color:var(--amber);">version mismatch</div>
+      <div class="tag" style="background:rgba(245,158,11,0.08);color:var(--amber);">RPC rate limited</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ PCEC PIPELINE ═══════ -->
+<section>
+  <h2>PCEC Pipeline</h2>
+  <p class="sub">Six-stage self-healing loop for every failure.</p>
+  <div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;">
+    <div style="padding:14px 22px;border-radius:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:var(--red);">PERCEIVE</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Detect + classify</div>
+    </div>
+    <span style="color:var(--text-dim);font-size:18px;">&#8594;</span>
+    <div style="padding:14px 22px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:var(--blue);">CONSTRUCT</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Build strategy</div>
+    </div>
+    <span style="color:var(--text-dim);font-size:18px;">&#8594;</span>
+    <div style="padding:14px 22px;border-radius:12px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:var(--purple);">EVALUATE</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Zod validate</div>
+    </div>
+    <span style="color:var(--text-dim);font-size:18px;">&#8594;</span>
+    <div style="padding:14px 22px;border-radius:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:var(--green);">COMMIT</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Execute repair</div>
+    </div>
+    <span style="color:var(--text-dim);font-size:18px;">&#8594;</span>
+    <div style="padding:14px 22px;border-radius:12px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:#2dd4bf;">VERIFY</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Confirm on-chain</div>
+    </div>
+    <span style="color:var(--text-dim);font-size:18px;">&#8594;</span>
+    <div style="padding:14px 22px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);text-align:center;">
+      <div style="font-size:13px;font-weight:700;color:var(--amber);">GENE</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Learn + store</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ CROSS-PLATFORM IMMUNITY ═══════ -->
+<section>
+  <h2>Cross-Platform Immunity</h2>
+  <p class="sub">Genes learned from Tempo and Privy protect Coinbase workflows automatically.</p>
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>Tempo Gene</th><th>Coinbase Scenario</th><th>Category</th><th>Q-Value</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--amber);">nonce_desync</td><td>AA25 Invalid nonce (Paymaster)</td><td>B - nonce_refresh</td><td style="color:var(--green);">0.88</td></tr>
+        <tr><td style="color:var(--amber);">rate_limit_429</td><td>rate_limit_exceeded (CDP)</td><td>A - retry_backoff</td><td style="color:var(--green);">0.92</td></tr>
+        <tr><td style="color:var(--amber);">gas_estimation</td><td>GAS_ESTIMATION_ERROR (Paymaster)</td><td>B - gas_bump</td><td style="color:var(--green);">0.85</td></tr>
+        <tr><td style="color:var(--amber);">insufficient_funds</td><td>insufficient USDC (x402)</td><td>C - topup</td><td style="color:var(--green);">0.79</td></tr>
+        <tr><td style="color:var(--amber);">rpc_timeout</td><td>timed_out (CDP)</td><td>B - rpc_switch</td><td style="color:var(--green);">0.91</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════ SAFETY MODES ═══════ -->
+<section>
+  <h2>Safety Modes</h2>
+  <p class="sub">Three execution tiers. Default is observe (zero risk).</p>
+  <div class="grid3">
+    <div style="padding:18px;border-radius:14px;background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.15);">
+      <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:6px;">observe (default)</div>
+      <div style="font-size:12px;color:var(--text-dim);">Diagnose only. Zero execution. Zero risk. Perfect for CI and monitoring.</div>
+    </div>
+    <div style="padding:18px;border-radius:14px;background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.15);">
+      <div style="font-size:14px;font-weight:700;color:var(--amber);margin-bottom:6px;">auto</div>
+      <div style="font-size:12px;color:var(--text-dim);">Execute Category A+B (retry, nonce refresh, network switch). No fund movement.</div>
+    </div>
+    <div style="padding:18px;border-radius:14px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.15);">
+      <div style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:6px;">full</div>
+      <div style="font-size:12px;color:var(--text-dim);">Execute Category C (swap, split, topup). Requires cost ceiling. Fund movement enabled.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ MCP + API ═══════ -->
+<section>
+  <h2>MCP + API Integration</h2>
+  <p class="sub">Connect Helix to Coinbase AgentKit via 5 MCP tools.</p>
+  <div class="grid2" style="align-items:start;">
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--text-bright);margin-bottom:12px;">AgentKit Integration</div>
+      <div class="code-block"><span style="color:var(--purple);">import</span> { Helix } <span style="color:var(--purple);">from</span> <span style="color:var(--green);">'@helix-agent/core'</span>;
+<span style="color:var(--purple);">import</span> { CdpAgentkit } <span style="color:var(--purple);">from</span> <span style="color:var(--green);">'@coinbase/cdp-agentkit-core'</span>;
+
+<span style="color:var(--purple);">const</span> helix = <span style="color:var(--purple);">new</span> Helix({ mode: <span style="color:var(--green);">'auto'</span> });
+<span style="color:var(--purple);">const</span> kit = <span style="color:var(--purple);">await</span> CdpAgentkit.configureWithWallet();
+
+<span style="color:var(--text-dim);">// Wrap any AgentKit call</span>
+<span style="color:var(--purple);">try</span> {
+  <span style="color:var(--purple);">await</span> kit.transfer({ to, amount });
+} <span style="color:var(--purple);">catch</span> (err) {
+  <span style="color:var(--purple);">const</span> result = <span style="color:var(--purple);">await</span> helix.diagnose(err);
+  <span style="color:var(--text-dim);">// result.strategy, result.gene, result.reasoning</span>
+}</div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;color:var(--text-bright);margin-bottom:12px;">Live API</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Production endpoint:</div>
+      <div class="code-block" style="margin-bottom:16px;"><span style="color:var(--green);">GET</span> https://helix-production-e110.up.railway.app/api/helix/status
+<span style="color:var(--green);">GET</span> https://helix-production-e110.up.railway.app/api/helix/stream</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:8px;">MCP Tools</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:2;">
+        <code style="color:var(--amber);">helix_diagnose</code> - Classify + recommend<br>
+        <code style="color:var(--amber);">helix_repair</code> - Execute strategy<br>
+        <code style="color:var(--amber);">helix_explain</code> - Gene Map reasoning<br>
+        <code style="color:var(--amber);">helix_status</code> - System health<br>
+        <code style="color:var(--amber);">helix_simulate</code> - Dry-run diagnosis
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <span style="color:var(--amber);font-weight:700;">Helix</span> v0.9.0 &nbsp;&middot;&nbsp; @helix-agent/core &nbsp;&middot;&nbsp; MIT License
+</footer>
+
+</body>
+</html>

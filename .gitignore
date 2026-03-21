@@ -4,3 +4,4 @@ dist/
 helix.config.json
 .env
 .DS_Store
+examples/e2e-agent/.env.test
