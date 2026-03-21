@@ -49,12 +49,31 @@ export class PcecEngine {
   public stats = { repairs: 0, savedRevenue: 0, immuneHits: 0 };
   private readonly MAX_CYCLES = 50;
   private cycleCount = 0;
+  /** D6: Systematic failure tracker — detect repeated identical failures */
+  private failureTracker: Map<string, { count: number; firstSeen: number; lastSeen: number }> = new Map();
 
   constructor(geneMap: GeneMap, agentId: string = 'default', options?: WrapOptions) {
     this.geneMap = geneMap;
     this.agentId = agentId;
     this.options = options ?? {};
     this.provider = new HelixProvider(options?.provider);
+  }
+
+  private checkSystematic(failure: FailureClassification): string | null {
+    const key = `${this.agentId}:${failure.code}:${failure.category}`;
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+    const tracker = this.failureTracker.get(key);
+    if (!tracker || now - tracker.lastSeen > oneHour) {
+      this.failureTracker.set(key, { count: 1, firstSeen: now, lastSeen: now });
+      return null;
+    }
+    tracker.count++;
+    tracker.lastSeen = now;
+    if (tracker.count >= 5) {
+      return `SYSTEMATIC: ${failure.code}/${failure.category} triggered ${tracker.count}x in ${Math.round((now - tracker.firstSeen) / 60000)}min for agent '${this.agentId}'. Likely a code bug, not transient.`;
+    }
+    return null;
   }
 
   registerAdapter(adapter: PlatformAdapter): void {
@@ -145,6 +164,13 @@ export class PcecEngine {
       severity: failure.severity, platform: failure.platform,
       details: failure.details,
     });
+
+    // ── D6: Systematic failure detection ──
+    const systematicWarning = this.checkSystematic(failure);
+    if (systematicWarning) {
+      bus.emit('error', this.agentId, { reason: 'SYSTEMATIC', message: systematicWarning });
+      this.options.onSystematic?.(systematicWarning, failure);
+    }
 
     // ── GENE MAP LOOKUP (with Q-value ranking) ──
     const existingGene = this.geneMap.lookup(failure.code, failure.category);

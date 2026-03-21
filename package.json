@@ -4,6 +4,7 @@
   "workspaces": [
     "packages/core",
     "packages/mcp",
+    "packages/api",
     "dashboard"
   ],
   "scripts": {
@@ -17,6 +18,7 @@
     "demo:chain": "tsx examples/real-chain/run.ts",
     "dash": "tsx dashboard/server.ts",
     "mcp": "tsx packages/mcp/src/server.ts",
+    "api": "tsx packages/api/src/server.ts",
     "typecheck": "tsc --noEmit -p packages/core/tsconfig.json"
   },
   "devDependencies": {

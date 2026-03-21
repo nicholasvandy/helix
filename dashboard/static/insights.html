@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HELIX INSIGHTS</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0c0a07; color: #e5e5e5; font-family: 'Sora', sans-serif; font-size: 14px; line-height: 1.6; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+  a { color: #f59e0b; text-decoration: none; transition: color .15s; }
+  a:hover { color: #fbbf24; }
+
+  /* Layout */
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 28px; }
+
+  /* Header */
+  header { padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  header .inner { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-weight: 700; font-size: 15px; letter-spacing: 2.5px; color: #f59e0b; }
+  .logo span { color: rgba(255,255,255,0.4); font-weight: 400; margin-left: 6px; letter-spacing: 1px; font-size: 13px; }
+  nav { display: flex; gap: 28px; font-size: 13px; font-weight: 500; }
+  nav a { color: rgba(255,255,255,0.45); }
+  nav a:hover { color: rgba(255,255,255,0.8); }
+  nav a.active { color: #f59e0b; }
+
+  /* Cards */
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 22px 26px; }
+
+  /* Alert */
+  .alert { border: 1px solid rgba(239,68,68,0.5); background: rgba(239,68,68,0.06); border-radius: 14px; padding: 16px 22px; margin: 28px 0 24px; display: flex; align-items: center; gap: 14px; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .alert-text { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .alert-text strong { color: #ef4444; font-weight: 600; }
+
+  /* KPI row */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi { text-align: center; }
+  .kpi .value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 2px; }
+  .kpi .sub { font-size: 11px; color: rgba(255,255,255,0.35); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+  .kpi .pct { font-size: 12px; color: #10b981; font-weight: 500; margin-top: 2px; }
+  .kpi .value.amber { color: #f59e0b; }
+  .kpi .value.green { color: #10b981; }
+  .kpi .value.red { color: #ef4444; }
+  .kpi .value.blue { color: #3b82f6; }
+  .kpi .value.purple { color: #8b5cf6; }
+
+  /* Charts grid */
+  .charts { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+  /* Bar chart */
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .bar-label { width: 120px; font-size: 12px; color: rgba(255,255,255,0.55); text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 22px; background: rgba(255,255,255,0.04); border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; color: rgba(0,0,0,0.7); }
+  .bar-pct { width: 44px; font-size: 12px; color: rgba(255,255,255,0.4); text-align: right; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+
+  /* Platform list */
+  .platform-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .platform-item:last-child { border-bottom: none; }
+  .platform-name { font-size: 13px; font-weight: 500; }
+  .platform-count { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.5); }
+  .platform-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; display: inline-block; }
+
+  /* Section headings */
+  .section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.3); margin-bottom: 18px; }
+  .card-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 16px; letter-spacing: 0.5px; }
+
+  /* Gene table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.25); padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); }
+  tr:last-child td { border-bottom: none; }
+  .q-bar { width: 60px; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  .q-fill { height: 100%; border-radius: 3px; }
+  .q-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-left: 8px; color: rgba(255,255,255,0.45); }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; margin-right: 4px; }
+  .tag-tempo { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .tag-privy { background: rgba(59,130,246,0.15); color: #3b82f6; }
+  .tag-coinbase { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+  .tag-generic { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+  .tag-cross { background: rgba(16,185,129,0.15); color: #10b981; }
+
+  /* Health summary */
+  .health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .health-stat { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; }
+  .health-stat:last-child { border-bottom: none; }
+  .health-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .mode-bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; margin-top: 12px; }
+  .mode-segment { height: 100%; }
+
+  /* Footer */
+  footer { padding: 28px 0; margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.04); text-align: center; font-size: 11px; color: rgba(255,255,255,0.2); }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .charts { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap inner" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="logo">HELIX<span>INSIGHTS</span></div>
+    <nav>
+      <a href="/">Lab</a>
+      <a href="/docs">Docs</a>
+      <a href="/benchmark">Benchmark</a>
+      <a href="/insights" class="active">Insights</a>
+      <a href="/milestone">Milestone</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Systematic Failure Alert -->
+  <div class="alert">
+    <div class="alert-dot"></div>
+    <div class="alert-text">
+      <strong>Systematic failure detected:</strong> Nonce mismatch errors spiked 3.2x on Tempo platform in the last 4 hours.
+      Gene <code style="color:#f59e0b;">nonce_resync_v3</code> auto-escalated to aggressive retry mode.
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="card kpi">
+      <div class="value red">847</div>
+      <div class="sub">Total Failures</div>
+      <div class="pct" style="color:rgba(255,255,255,0.3);">last 24h</div>
+    </div>
+    <div class="card kpi">
+      <div class="value green">812</div>
+      <div class="sub">Auto-Repaired</div>
+      <div class="pct">95.9%</div>
+    </div>
+    <div class="card kpi">
+      <div class="value amber">634</div>
+      <div class="sub">Immune</div>
+      <div class="pct">74.9%</div>
+    </div>
+    <div class="card kpi">
+      <div class="value blue">$12,400</div>
+      <div class="sub">Revenue Protected</div>
+      <div class="pct" style="color:rgba(255,255,255,0.3);">estimated</div>
+    </div>
+    <div class="card kpi">
+      <div class="value purple">230ms</div>
+      <div class="sub">Avg Repair Time</div>
+      <div class="pct" style="color:#10b981;">-18% vs yesterday</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts">
+    <div class="card">
+      <div class="card-title">Top Failure Categories</div>
+      <div class="bar-row">
+        <div class="bar-label">Nonce Mismatch</div>
+        <div class="bar-track"><div class="bar-fill" style="width:37%;background:#f59e0b;">37%</div></div>
+        <div class="bar-pct">314</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Gas Estimation</div>
+        <div class="bar-track"><div class="bar-fill" style="width:23%;background:#3b82f6;">23%</div></div>
+        <div class="bar-pct">195</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Rate Limit</div>
+        <div class="bar-track"><div class="bar-fill" style="width:18%;background:#8b5cf6;">18%</div></div>
+        <div class="bar-pct">153</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Policy Violation</div>
+        <div class="bar-track"><div class="bar-fill" style="width:11%;background:#10b981;">11%</div></div>
+        <div class="bar-pct">93</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Insufficient Bal.</div>
+        <div class="bar-track"><div class="bar-fill" style="width:6%;background:#ef4444;">6%</div></div>
+        <div class="bar-pct">51</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Other</div>
+        <div class="bar-track"><div class="bar-fill" style="width:5%;background:rgba(255,255,255,0.2);">5%</div></div>
+        <div class="bar-pct">41</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Platform Distribution</div>
+      <div class="platform-item">
+        <div><span class="platform-dot" style="background:#f59e0b;"></span><span class="platform-name">Tempo</span></div>
+        <span class="platform-count">389 (45.9%)</span>
+      </div>
+      <div class="platform-item">
+        <div><span class="platform-dot" style="background:#3b82f6;"></span><span class="platform-name">Privy</span></div>
+        <span class="platform-count">221 (26.1%)</span>
+      </div>
+      <div class="platform-item">
+        <div><span class="platform-dot" style="background:#8b5cf6;"></span><span class="platform-name">Coinbase</span></div>
+        <span class="platform-count">148 (17.5%)</span>
+      </div>
+      <div class="platform-item">
+        <div><span class="platform-dot" style="background:rgba(255,255,255,0.25);"></span><span class="platform-name">Generic</span></div>
+        <span class="platform-count">89 (10.5%)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gene Map Table -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-title">Gene Map</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Strategy</th>
+          <th>Q-Value</th>
+          <th>Fixes</th>
+          <th>Avg Time</th>
+          <th>Platforms</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Nonce Mismatch</td>
+          <td class="mono" style="font-size:12px;">nonce_resync_v3</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:94%;background:#10b981;"></span></span><span class="q-val">0.94</span></td>
+          <td class="mono">314</td>
+          <td class="mono">180ms</td>
+          <td><span class="tag tag-tempo">tempo</span><span class="tag tag-privy">privy</span></td>
+        </tr>
+        <tr>
+          <td>Gas Estimation</td>
+          <td class="mono" style="font-size:12px;">gas_bump_linear</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:91%;background:#10b981;"></span></span><span class="q-val">0.91</span></td>
+          <td class="mono">195</td>
+          <td class="mono">210ms</td>
+          <td><span class="tag tag-tempo">tempo</span><span class="tag tag-coinbase">coinbase</span></td>
+        </tr>
+        <tr>
+          <td>Rate Limit</td>
+          <td class="mono" style="font-size:12px;">exp_backoff_jitter</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:88%;background:#f59e0b;"></span></span><span class="q-val">0.88</span></td>
+          <td class="mono">153</td>
+          <td class="mono">340ms</td>
+          <td><span class="tag tag-cross">cross</span></td>
+        </tr>
+        <tr>
+          <td>Policy Violation</td>
+          <td class="mono" style="font-size:12px;">policy_refresh_v2</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:85%;background:#f59e0b;"></span></span><span class="q-val">0.85</span></td>
+          <td class="mono">93</td>
+          <td class="mono">260ms</td>
+          <td><span class="tag tag-privy">privy</span></td>
+        </tr>
+        <tr>
+          <td>Insufficient Balance</td>
+          <td class="mono" style="font-size:12px;">balance_wait_poll</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:79%;background:#f59e0b;"></span></span><span class="q-val">0.79</span></td>
+          <td class="mono">51</td>
+          <td class="mono">420ms</td>
+          <td><span class="tag tag-coinbase">coinbase</span><span class="tag tag-generic">generic</span></td>
+        </tr>
+        <tr>
+          <td>Session Expiry</td>
+          <td class="mono" style="font-size:12px;">session_rotate</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:92%;background:#10b981;"></span></span><span class="q-val">0.92</span></td>
+          <td class="mono">87</td>
+          <td class="mono">150ms</td>
+          <td><span class="tag tag-tempo">tempo</span><span class="tag tag-privy">privy</span><span class="tag tag-coinbase">coinbase</span></td>
+        </tr>
+        <tr>
+          <td>Signature Invalid</td>
+          <td class="mono" style="font-size:12px;">sig_reconstruct</td>
+          <td><span class="q-bar"><span class="q-fill" style="width:72%;background:#ef4444;"></span></span><span class="q-val">0.72</span></td>
+          <td class="mono">38</td>
+          <td class="mono">510ms</td>
+          <td><span class="tag tag-generic">generic</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Gene Map Health -->
+  <div class="health-grid">
+    <div class="card">
+      <div class="card-title">Gene Map Health</div>
+      <div class="health-stat">
+        <span style="color:rgba(255,255,255,0.5);">Active Genes</span>
+        <span class="health-val" style="color:#10b981;">47</span>
+      </div>
+      <div class="health-stat">
+        <span style="color:rgba(255,255,255,0.5);">Cross-Platform Genes</span>
+        <span class="health-val" style="color:#3b82f6;">12</span>
+      </div>
+      <div class="health-stat">
+        <span style="color:rgba(255,255,255,0.5);">Average Q-Value</span>
+        <span class="health-val" style="color:#f59e0b;">0.87</span>
+      </div>
+      <div class="health-stat">
+        <span style="color:rgba(255,255,255,0.5);">Genes Added (7d)</span>
+        <span class="health-val" style="color:rgba(255,255,255,0.6);">+9</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Repair Mode Distribution</div>
+      <div class="mode-bar">
+        <div class="mode-segment" style="width:74.9%;background:#10b981;" title="Immune 74.9%"></div>
+        <div class="mode-segment" style="width:21%;background:#f59e0b;" title="PCEC 21%"></div>
+        <div class="mode-segment" style="width:4.1%;background:#ef4444;" title="Unrecoverable 4.1%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:12px;">
+        <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:6px;"></span><span style="color:rgba(255,255,255,0.5);">Immune</span> <span class="mono" style="color:#10b981;">74.9%</span></div>
+        <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px;"></span><span style="color:rgba(255,255,255,0.5);">PCEC</span> <span class="mono" style="color:#f59e0b;">21%</span></div>
+        <div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px;"></span><span style="color:rgba(255,255,255,0.5);">Unrecoverable</span> <span class="mono" style="color:#ef4444;">4.1%</span></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">HELIX v0.4.0-insights &middot; Gene Map v3 &middot; Dashboard compiled 2026-03-21 &middot; Data refreshed every 60s</div>
+</footer>
+
+</body>
+</html>

@@ -116,11 +116,21 @@ export interface PlatformAdapter {
 
 // ── Provider Config ─────────────────────────────────────────────
 
+export interface DexConfig {
+  routerAddress: `0x${string}`;
+  quoterAddress?: `0x${string}`;
+  wethAddress: `0x${string}`;
+  defaultTokens: { usdc?: `0x${string}`; usdt?: `0x${string}`; dai?: `0x${string}` };
+  defaultSlippage: number;
+  defaultDeadlineSeconds: number;
+}
+
 export interface HelixProviderConfig {
   rpcUrl?: string;
   privateKey?: string;
   privy?: { appId: string; appSecret: string; walletId?: string };
   coinbase?: { apiKeyName: string; apiKeyPrivateKey: string };
+  dex?: DexConfig;
 }
 
 // ── SSE Event Types ─────────────────────────────────────────────
@@ -176,6 +186,7 @@ export interface WrapOptions {
   onRepair?: (result: RepairResult) => void;
   onFailure?: (result: RepairResult) => void;
   onHelixError?: (error: Error) => void;
+  onSystematic?: (warning: string, failure: FailureClassification) => void;
 }
 
 // ── Revenue estimates per category ──────────────────────────────

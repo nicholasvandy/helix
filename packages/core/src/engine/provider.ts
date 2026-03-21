@@ -10,7 +10,9 @@ import {
   type Account,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import type { FailureClassification, HelixProviderConfig } from './types.js';
+import type { DexConfig, FailureClassification, HelixProviderConfig } from './types.js';
+import { ERC20_ABI, SWAP_ROUTER_ABI } from './abi.js';
+import { getDexPreset } from './dex-presets.js';
 
 export interface CommitResult {
   success: boolean;
@@ -301,17 +303,39 @@ export class HelixProvider {
           return { success: true, overrides: { topupTxHash: hash, topupAmount: formatEther(amt) }, description: `Topped up ${formatEther(amt)} ETH: ${hash.slice(0, 18)}...` };
         }
 
-        // ═══════ DEX Operations (pending router integration) ═══════
+        // ═══════ DEX Operations (Uniswap V3 via viem) ═══════
 
         case 'swap_currency':
         case 'switch_stablecoin':
-        case 'split_swap':
         case 'swap_to_usdc': {
-          if (!this.walletClient) {
+          if (!this.walletClient || !this.account || !this.publicClient) {
             if (!this.hasExplicitConfig) return this._mock(strategy);
             return { success: false, overrides: {}, description: `No wallet for ${strategy}` };
           }
-          return { success: true, overrides: { dexPending: true }, description: `[PENDING] ${strategy}: DEX integration needed` };
+          const dex = this.config.dex ?? getDexPreset(await this.publicClient.getChainId());
+          if (!dex) return { success: false, overrides: {}, description: `No DEX config for this chain` };
+          return await this._executeSwap(dex, strategy, failure, context);
+        }
+
+        case 'split_swap': {
+          if (!this.walletClient || !this.account || !this.publicClient) {
+            if (!this.hasExplicitConfig) return this._mock(strategy);
+            return { success: false, overrides: {}, description: 'No wallet for split_swap' };
+          }
+          const dex = this.config.dex ?? getDexPreset(await this.publicClient.getChainId());
+          if (!dex) return { success: false, overrides: {}, description: 'No DEX config for this chain' };
+          const total = context?.amount ? BigInt(context.amount as string) : 0n;
+          const numChunks = Number(context?.chunks ?? 3);
+          if (total === 0n) return { success: true, overrides: { splitRequired: true }, description: 'Flagged for split' };
+          const chunkSz = total / BigInt(numChunks);
+          const hashes: string[] = [];
+          for (let i = 0; i < numChunks; i++) {
+            const amt = i < numChunks - 1 ? chunkSz : total - chunkSz * BigInt(i);
+            const r = await this._executeSwap(dex, 'swap_currency', failure, { ...context, amount: amt.toString() });
+            if (!r.success) return { success: false, overrides: { completedChunks: i, hashes }, description: `Split swap failed at chunk ${i + 1}/${numChunks}` };
+            if (r.overrides.txHash) hashes.push(r.overrides.txHash as string);
+          }
+          return { success: true, overrides: { txHashes: hashes, chunks: numChunks }, description: `Split swap: ${numChunks} chunks` };
         }
 
         // ═══════ Default ═══════
@@ -321,6 +345,53 @@ export class HelixProvider {
       }
     } catch (err) {
       return { success: false, overrides: {}, description: `Execution error in '${strategy}': ${(err as Error).message}` };
+    }
+  }
+
+  private async _executeSwap(
+    dex: DexConfig, strategy: string, failure: FailureClassification, context?: Record<string, unknown>,
+  ): Promise<CommitResult> {
+    if (!this.walletClient || !this.account || !this.publicClient) {
+      return { success: false, overrides: {}, description: 'No wallet client for swap' };
+    }
+    let tokenIn = context?.tokenIn as `0x${string}` | undefined;
+    let tokenOut = context?.tokenOut as `0x${string}` | undefined;
+    if ((strategy === 'swap_to_usdc' || strategy === 'switch_stablecoin') && !tokenOut) tokenOut = dex.defaultTokens.usdc;
+    if (!tokenIn) tokenIn = dex.wethAddress;
+    if (!tokenOut) tokenOut = dex.defaultTokens.usdc;
+    if (!tokenIn || !tokenOut) return { success: false, overrides: {}, description: 'Cannot determine token pair' };
+    const amount = context?.amount ? BigInt(context.amount as string) : 0n;
+    if (amount === 0n) return { success: false, overrides: {}, description: 'Swap amount is 0' };
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + dex.defaultDeadlineSeconds);
+    try {
+      const isNative = tokenIn.toLowerCase() === dex.wethAddress.toLowerCase();
+      if (!isNative) {
+        const allowance = await this.publicClient.readContract({
+          address: tokenIn, abi: ERC20_ABI, functionName: 'allowance',
+          args: [this.account.address, dex.routerAddress],
+        }) as bigint;
+        if (allowance < amount) {
+          const approveTx = await this.walletClient.writeContract({
+            address: tokenIn, abi: ERC20_ABI, functionName: 'approve',
+            args: [dex.routerAddress, amount * 2n],
+            account: this.account, chain: null,
+          });
+          await this.publicClient.waitForTransactionReceipt({ hash: approveTx });
+        }
+      }
+      const swapTx = await this.walletClient.writeContract({
+        address: dex.routerAddress, abi: SWAP_ROUTER_ABI, functionName: 'exactInputSingle',
+        args: [{ tokenIn, tokenOut, fee: 3000, recipient: this.account.address, deadline, amountIn: amount, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }],
+        value: isNative ? amount : 0n,
+        account: this.account, chain: null,
+      });
+      const receipt = await this.publicClient.waitForTransactionReceipt({ hash: swapTx });
+      if (receipt.status === 'success') {
+        return { success: true, overrides: { txHash: swapTx, tokenIn, tokenOut, amountIn: amount.toString(), block: receipt.blockNumber.toString() }, description: `Swap confirmed at block ${receipt.blockNumber}` };
+      }
+      return { success: false, overrides: { txHash: swapTx, reverted: true }, description: `Swap reverted` };
+    } catch (err) {
+      return { success: false, overrides: {}, description: `Swap failed: ${(err as Error).message.slice(0, 200)}` };
     }
   }
 

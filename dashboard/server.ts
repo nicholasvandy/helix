@@ -28,6 +28,7 @@ app.get('/', (_req, res) => res.sendFile(join(staticDir, 'index.html')));
 app.get('/docs', (_req, res) => res.sendFile(join(staticDir, 'docs.html')));
 app.get('/benchmark', (_req, res) => res.sendFile(join(staticDir, 'benchmark.html')));
 app.get('/milestone', (_req, res) => res.sendFile(join(staticDir, 'milestone.html')));
+app.get('/insights', (_req, res) => res.sendFile(join(staticDir, 'insights.html')));
 
 // SSE endpoint
 app.get('/api/helix/stream', (_req, res) => {

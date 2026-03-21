@@ -18,6 +18,7 @@ export type {
   WrapOptions,
   HelixMode,
   HelixProviderConfig,
+  DexConfig,
 } from './engine/types.js';
 
 export { REVENUE_AT_RISK, DEFAULT_CONFIG } from './engine/types.js';
@@ -31,3 +32,5 @@ export { GeneMap } from './engine/gene-map.js';
 export { EventBus, bus } from './engine/bus.js';
 export { evaluate } from './engine/evaluate.js';
 export { HelixProvider } from './engine/provider.js';
+export { getDexPreset, DEX_PRESETS } from './engine/dex-presets.js';
+export { registerShutdownHandler } from './engine/lifecycle.js';
