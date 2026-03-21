@@ -1,28 +1,42 @@
-# 🧬 Helix
+<div align="center">
 
-**Self-healing infrastructure for AI agent payments.**
+# Helix
 
-Two lines to integrate. Any platform. Every failure fixed once, remembered forever.
+**Self-healing infrastructure for AI agent payments**
 
-[![CI](https://github.com/adrianhihi/helix/actions/workflows/ci.yml/badge.svg)](https://github.com/adrianhihi/helix/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@helix-agent/core)](https://www.npmjs.com/package/@helix-agent/core)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Every payment failure on the internet should only need to be solved once.
+
+[![npm](https://img.shields.io/npm/v/@helix-agent/core)](https://www.npmjs.com/package/@helix-agent/core)
+[![tests](https://img.shields.io/badge/tests-135%2B%20passing-brightgreen)]()
+[![license](https://img.shields.io/badge/license-MIT-blue)]()
+
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [API](#api) · [Dashboard](#dashboard) · [MCP Server](#mcp-server)
+
+</div>
 
 ---
 
-<!-- GIF of `npm run demo` terminal output goes here -->
-<!-- <p align="center"><img src="docs/demo.gif" width="720" /></p> -->
-
 ## The Problem
 
-AI agents make payments. Payments fail. Every agent handles this differently — or doesn't handle it at all.
+AI agents fail at payments. A lot.
 
-- **Insufficient balance** → agent crashes, user loses money
-- **Wrong network** → transaction reverts, gas wasted
-- **Nonce desync** → transactions stuck in mempool for hours
-- **Compliance block** → agent retries forever, never succeeds
+```
+Agent tries to pay → nonce mismatch → retry → wrong chain → retry → gas too low → give up
+```
 
-Today, every agent team writes their own retry logic. Tomorrow, they all use Helix.
+Every agent team builds the same retry logic. The same error handling. The same on-call rotations. **None of them learn from each other.**
+
+## The Solution
+
+Helix wraps your agent with a self-healing immune system. When a payment fails, Helix diagnoses the error, selects a repair strategy, executes it, verifies the fix, and stores the solution in a **Gene Map** — so the same failure never costs you twice.
+
+```
+Error → PERCEIVE → CONSTRUCT → EVALUATE → COMMIT → VERIFY → GENE MAP
+                                                              ↓
+Next time: Error → Gene Map hit → IMMUNE ⚡ (<100ms, $0)
+```
+
+**Retry is a hammer. PCEC is a surgeon.**
 
 ## Quick Start
 
@@ -33,244 +47,161 @@ npm install @helix-agent/core
 ```typescript
 import { wrap } from '@helix-agent/core';
 
-// Wrap any async function — payments, signing, API calls
-const resilientPay = wrap(fetch);
+const safePay = wrap(myPaymentFunction, {
+  mode: 'observe',        // diagnose only (default) — zero risk
+  agentId: 'my-agent',
+  maxRepairCostUsd: 0.50, // cost ceiling for auto-repairs
+});
 
-// Same input, same output. Failures become self-healing.
-const result = await resilientPay('https://api.service.com/pay', { ... });
+const result = await safePay({ to: '0x...', amount: '1.0' });
 ```
 
-That's it. Two lines. When `fetch` fails:
-1. **Perceive** — classify the error (balance? nonce? compliance?)
-2. **Construct** — generate repair candidates from all platform adapters
-3. **Evaluate** — score candidates on cost, speed, requirements, historical success
-4. **Commit** — execute the winning repair, retry the original call
-5. **Gene** — store the fix. Next time → instant immune fix in <100ms.
-
-## Supported Platforms
-
-| Platform | Scenarios | What Helix Handles |
-|----------|-----------|-------------------|
-| **Tempo / MPP** | 13 | Balance, session, currency, nonce, batch, service, DEX, compliance, cascade, off-ramp, token pause, sponsor, network |
-| **Privy** | 7 unique | Policy limits, nonce desync, gas sponsor, cross-chain, insufficient balance, broadcast nonce, broadcast params |
-| **Generic HTTP** | 3 | Rate limit (429), server error (500), timeout |
-| **Stripe** | 🔜 | Card declined, expired card, rate limit |
-
-## Cross-Platform Immunity
-
-This is what makes Helix different from a retry library.
-
-```
-Tempo agent hits nonce error     → PCEC repairs it → Gene stored ✅
-                                   (code: verification-failed, category: signature)
-
-...later...
-
-Privy agent hits nonce desync    → Gene Map lookup → IMMUNE ⚡
-                                   Same (code, category) → instant fix!
-
-Same failure category. Same fix. Different platform.
-Every fix makes every platform stronger.
-```
-
-The Gene Map stores by `(code, category)` — **not** by platform. A fix learned from Tempo automatically protects Privy, Stripe, and any future platform with the same failure class.
-
-Run `npm run demo` to see this live — Privy scenarios resolve instantly using Genes learned from Tempo.
-
-## All 23 Failure Scenarios
-
-| # | Platform | Scenario | PCEC Strategy | Cross-Platform? |
-|---|----------|----------|---------------|----------------|
-| 1 | Tempo | Insufficient Balance | swap_currency / reduce_request | |
-| 2 | Tempo | Session Expired | renew_session | |
-| 3 | Tempo | Currency Mismatch | swap_direct / switch_service | |
-| 4 | Tempo | Nonce Mismatch | refresh_nonce | Gene → Privy #15 |
-| 5 | Tempo | Batch Revert | remove_and_resubmit | |
-| 6 | Tempo | Service Down (paid) | retry_with_receipt | Gene → Generic #19 |
-| 7 | Tempo | DEX Slippage | split_swap | |
-| 8 | Tempo | TIP-403 Compliance Block | switch_stablecoin | |
-| 9 | Tempo | Cascade Failure | refund_waterfall | |
-| 10 | Tempo | Off-Ramp Failure | hold_and_notify | |
-| 11 | Tempo | Token Pause | switch_stablecoin (immune) | |
-| 12 | Tempo | Fee Sponsor Exhausted | self_pay_gas | Gene → Privy #16 |
-| 13 | Tempo | Network Mismatch **[REAL]** | switch_network | Gene → Privy #17 |
-| 14 | Privy | Policy Spending Limit | split_transaction | |
-| 15 | Privy | Nonce Desync | refresh_nonce | ⚡ from Tempo #4 |
-| 16 | Privy | Gas Sponsor Exhausted | self_pay_gas | ⚡ from Tempo #12 |
-| 17 | Privy | Cross-Chain Mismatch | switch_network | ⚡ from Tempo #13 |
-| 18 | Privy | Insufficient Balance | reduce_request | ⚡ from Tempo #1 |
-| 19 | Privy | Broadcast Nonce Conflict | refresh_nonce | ⚡ from Tempo #4 |
-| 20 | Privy | Broadcast Invalid Params | fix_params | |
-| 21 | Generic | 429 Rate Limited | backoff_retry | |
-| 22 | Generic | 500 Server Error | retry / switch_provider | ⚡ from Tempo #6 |
-| 23 | Generic | Request Timeout | retry | |
-
-> Scenario #13 is not simulated — we ran `npx mppx` against OpenAI's MPP gateway and hit `TIP20 Uninitialized` in production.
+**That's it.** One import, one wrap. Your agent now self-heals.
 
 ## How It Works
 
-```
-Error → PERCEIVE → CONSTRUCT → EVALUATE → COMMIT → GENE
-         │           │            │          │        │
-         │           │            │          │        └─ Store fix in Gene Map (SQLite)
-         │           │            │          └─ Execute winning strategy
-         │           │            └─ Score candidates (cost × speed × history × requirements)
-         │           └─ Generate repair candidates from ALL platform adapters
-         └─ Chain through platform adapters until one classifies the error
+### PCEC Engine
 
-On repeat encounter:
-Error → PERCEIVE → GENE MAP HIT → IMMUNE ⚡ (50-100ms, skip Construct+Evaluate+Commit)
-```
+| Stage | What happens | Time |
+|-------|-------------|------|
+| **Perceive** | Classify error → code + category + severity + root cause | <1ms |
+| **Construct** | Generate candidate repair strategies, ranked by Q-value | <1ms |
+| **Evaluate** | Score candidates: cost, speed, safety, Gene Map history | <1ms |
+| **Commit** | Execute the winning strategy (if mode allows) | varies |
+| **Verify** | Validate the repair actually worked (SAGE paper) | <1ms |
+| **Gene** | Store successful fix in Gene Map for future immunity | <1ms |
 
-The Gene Map is keyed by `(failure_code, category)` — **not** by platform. This single architectural decision is what enables cross-platform immunity.
+### Gene Map — Collective Immunity
 
-## Integration Examples
+The Gene Map is a local database of proven repair strategies:
 
-### Tempo / MPP
+- **Q-value scoring** (MemRL paper) — reinforcement learning ranks strategies
+- **Seed Genes** — new users get 12 pre-loaded immunities from day 1
+- **Gene Combine** (ELL paper) — duplicate genes merge into stronger ones
+- **Root cause hints** (MAST paper) — systematic failures get flagged
+- **Failure attribution** — track which agent, which step, which workflow
+- **Gene links** (A-Mem paper) — co-occurring failures are linked
+
+### Three Safety Modes
+
+| Mode | Execution | Use case |
+|------|-----------|----------|
+| `observe` | Diagnose only, zero execution | Default, CI testing |
+| `auto` | Execute Category A+B (no fund movement) | Production read-only |
+| `full` | Execute Category C (fund movement) | Production with cost ceiling |
+
+## Platform Coverage
+
+| Platform | Scenarios | Examples |
+|----------|-----------|---------|
+| **Tempo/MPP** | 13 | balance, nonce, session, DEX, compliance, cascade |
+| **Privy** | 7 | policy, gas sponsor, cross-chain, broadcast |
+| **Coinbase** | 8+ | CDP API, Paymaster/ERC-4337, x402 |
+| **Generic HTTP** | 3 | 429, 500, timeout |
+| **Any** | ∞ | `wrap()` works on any async function |
+
+**31 scenarios. 25 real strategies. 5 platforms.**
+
+## API
+
+### `wrap(fn, options)`
+
 ```typescript
-import { wrap } from '@helix-agent/core';
-import { Mppx, tempo } from 'mppx/client';
-
-Mppx.create({ methods: [tempo({ account })] });
-const resilientFetch = wrap(fetch);
-const data = await resilientFetch('https://openai.mpp.tempo.xyz/v1/chat/completions', {
-  method: 'POST',
-  body: JSON.stringify({ model: 'gpt-4', messages: [...] }),
+const safeFn = wrap(myFunction, {
+  mode: 'observe' | 'auto' | 'full',
+  agentId: 'my-agent',
+  maxRepairCostUsd: 0.50,
+  blockStrategies: ['self_pay_gas'],
+  onRepair: (result) => console.log(result),
+  onSystematic: (alert) => pagerduty.trigger(alert),
 });
 ```
 
-### Privy Wallets
-```typescript
-import { wrap } from '@helix-agent/core';
+### `simulate(options)` — Test without executing
 
-const resilientSign = wrap(privy.wallets.ethereum.signTransaction.bind(privy));
-const tx = await resilientSign(walletId, { to: '0x...', value: '100' });
+```typescript
+import { simulate } from '@helix-agent/core';
+
+const result = simulate({ error: 'AA25 Invalid account nonce' });
+console.log(result.recommended.strategy); // 'refresh_nonce'
+console.log(result.immune);               // true (seed gene)
+console.log(result.rootCauseHint);         // 'concurrent_wallet_access'
 ```
 
-### Any HTTP Service
-```typescript
-import { wrap } from '@helix-agent/core';
+### Engine API
 
-const resilientCall = wrap(fetch);
-const result = await resilientCall('https://any-api.com/endpoint');
-// 429? 500? Timeout? Helix handles it.
-```
-
-### Advanced: Direct Engine Access
 ```typescript
 import { createEngine } from '@helix-agent/core';
 
-const engine = createEngine({ agentId: 'my-agent', platforms: ['tempo', 'privy'] });
+const engine = createEngine({ mode: 'observe', agentId: 'bot-1' });
+const result = await engine.repair(error, context);
 
-try {
-  await riskyOperation();
-} catch (error) {
-  const result = await engine.repair(error);
-  if (result.success) {
-    console.log(`Fixed via ${result.winner.strategy} in ${result.totalMs}ms`);
-    if (result.immune) console.log('⚡ Instant fix from Gene Map!');
-  }
-}
-```
-
-## Demo
-
-```bash
-npm run demo          # All 23 scenarios, cross-platform immunity test
-npm run demo:tempo    # Tempo-only (13 scenarios + immunity)
-npm run demo:privy    # Privy + cross-platform immunity from Tempo Genes
-npm run dash          # Minecraft isometric dashboard on :7842
+engine.getGeneMap().gc();                    // combine + prune
+engine.getGeneMap().getAgentStats('bot-1');  // failure attribution
+engine.getGeneMap().getRelatedFailures('verification-failed', 'signature');
 ```
 
 ## CLI
 
 ```bash
-npx helix init          # Interactive setup wizard
-npx helix status        # Live PCEC event stream + Gene Map
-npx helix dash          # Start the isometric dashboard
+npx helix status                              # Gene Map health
+npx helix simulate "AA25 Invalid account nonce" # dry-run diagnosis
+npx helix gc                                   # garbage collection
+npx helix stats bot-1                          # agent attribution
 ```
 
-## Adding a New Platform
+## Dashboard
 
-```typescript
-import type { PlatformAdapter } from '@helix-agent/core';
-
-const myAdapter: PlatformAdapter = {
-  name: 'my-platform',
-
-  perceive(error) {
-    if (error.message.includes('my-specific-error'))
-      return { code: 'payment-insufficient', category: 'balance',
-               severity: 'high', platform: 'my-platform',
-               details: error.message, timestamp: Date.now() };
-    return null; // not my error, try next adapter
-  },
-
-  construct(failure) {
-    if (failure.category === 'balance')
-      return [{ id: 'my_fix', strategy: 'my_fix',
-                description: 'My custom balance fix',
-                estimatedCostUsd: 0, estimatedSpeedMs: 200,
-                requirements: [], score: 0, successProbability: 0.9,
-                platform: 'my-platform' }];
-    return [];
-  },
-};
-
-// Register it
-import { createEngine } from '@helix-agent/core';
-const engine = createEngine();
-engine.registerAdapter(myAdapter);
+```bash
+npm run dash  # → http://localhost:7842
 ```
 
-Your adapter's Genes automatically benefit from — and contribute to — every other platform's learned fixes.
+## MCP Server
 
-## Architecture
-
-```
-helix/
-├── src/
-│   ├── core/                   # 100% platform-agnostic
-│   │   ├── types.ts            # All types + interfaces
-│   │   ├── bus.ts              # SSE EventBus (500-event ring buffer)
-│   │   ├── gene-map.ts         # SQLite Gene Map (WAL mode)
-│   │   ├── pcec.ts             # PCEC engine (pluggable perceive/construct)
-│   │   └── index.ts            # wrap() + createEngine() exports
-│   │
-│   ├── platforms/              # Platform-specific adapters
-│   │   ├── index.ts            # Registry + default adapter chain
-│   │   ├── tempo/              # 13 scenarios
-│   │   ├── privy/              # 7 unique scenarios
-│   │   ├── generic/            # 3 HTTP scenarios
-│   │   └── stripe/             # Placeholder
-│   │
-│   ├── demo/                   # Demo scripts
-│   ├── cli/                    # helix init/status/dash
-│   └── dashboard/              # Isometric lab visualization
+```bash
+npx @helix-agent/mcp
 ```
 
-## Roadmap
+Tools: `helix_diagnose` · `helix_repair` · `helix_gene_status` · `helix_check_immunity`
 
-- [x] Tempo / MPP — 13 scenarios, full PCEC pipeline
-- [x] Privy — 7 scenarios + cross-platform immunity
-- [x] Generic HTTP — 3 scenarios (429, 500, timeout)
-- [x] Cross-platform Gene sharing
-- [x] Isometric dashboard with 20 inject buttons
-- [ ] Stripe — card payments, subscription failures
-- [ ] Circle — USDC operations
-- [ ] Coinbase — exchange operations
-- [ ] LLM fallback — Claude/GPT for unknown failure analysis
-- [ ] Gene Registry — `helix gene push/pull` (share Genes across teams)
-- [ ] Shared Gene Network — cross-agent, cross-org immunity
+## MPP API
+
+Live at `https://helix-production-e110.up.railway.app`
+
+```bash
+curl -X POST .../v1/diagnose \
+  -H "Content-Type: application/json" \
+  -d '{"error": "AA25 Invalid account nonce"}'
+```
+
+Listed on [mppscan.com](https://mppscan.com).
+
+## Research Foundations
+
+| Paper | Implementation |
+|-------|----------------|
+| MemRL (2026) | Gene Map Q-value scoring |
+| SAGE (2025) | PCEC Verify stage |
+| ELL (2025) | Gene Combine |
+| MAST (2025) | Root cause hints |
+| ReasoningBank | Gene reasoning fields |
+| A-Mem | Gene relationship links |
+| Who&When | Failure attribution |
 
 ## Contributing
 
-PRs welcome. Especially:
-- **New platform adapters** — see "Adding a New Platform" above
-- **New failure scenarios** with real error messages from production
-- **Repair strategy improvements** backed by data
-- **Dashboard enhancements**
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 MIT
+
+---
+
+<div align="center">
+
+**We're not competing with LLMs. We're caching their intelligence.**
+
+[npm](https://www.npmjs.com/package/@helix-agent/core) · [GitHub](https://github.com/adrianhihi/helix) · [API](https://helix-production-e110.up.railway.app/health) · [mppscan](https://mppscan.com)
+
+</div>

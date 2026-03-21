@@ -89,6 +89,11 @@ export interface GeneCapsule {
   lastFailedAt?: number;
   createdAt?: string;
   lastUsedAt?: string;
+  // OPT-4: ReasoningBank
+  reasoning?: string;
+  failureAnalysis?: string[];
+  successContext?: { chains?: string[]; walletTypes?: string[]; platforms?: string[] };
+  failureContext?: { chains?: string[]; walletTypes?: string[]; note?: string };
 }
 
 export interface RepairResult {
@@ -105,6 +110,8 @@ export interface RepairResult {
   verified: boolean;
   skippedStrategies?: string[];
   costEstimate: number;
+  // OPT-10: Failure Attribution
+  attribution?: { agentId: string; stepId?: string; workflow?: string; timestamp: number };
 }
 
 // ── Platform Adapter Interface ──────────────────────────────────

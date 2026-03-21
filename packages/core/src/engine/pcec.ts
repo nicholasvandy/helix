@@ -50,8 +50,10 @@ export class PcecEngine {
   public stats = { repairs: 0, savedRevenue: 0, immuneHits: 0 };
   private readonly MAX_CYCLES = 50;
   private cycleCount = 0;
-  /** D6: Systematic failure tracker — detect repeated identical failures */
+  /** D6: Systematic failure tracker */
   private failureTracker: Map<string, { count: number; firstSeen: number; lastSeen: number }> = new Map();
+  /** OPT-5: Recent failures for co-occurrence detection */
+  private recentFailures: { code: string; category: string; timestamp: number }[] = [];
 
   constructor(geneMap: GeneMap, agentId: string = 'default', options?: WrapOptions) {
     this.geneMap = geneMap;
@@ -176,6 +178,16 @@ export class PcecEngine {
       bus.emit('error', this.agentId, { reason: 'SYSTEMATIC', message: systematicWarning });
       this.options.onSystematic?.(systematicWarning, failure);
     }
+
+    // ── OPT-5: Co-occurrence tracking for Gene Links ──
+    const now = Date.now();
+    this.recentFailures = this.recentFailures.filter(f => now - f.timestamp < 60_000);
+    for (const recent of this.recentFailures) {
+      if (recent.code !== failure.code || recent.category !== failure.category) {
+        this.geneMap.recordCoOccurrence(recent.code, recent.category, failure.code, failure.category);
+      }
+    }
+    this.recentFailures.push({ code: failure.code, category: failure.category, timestamp: now });
 
     // ── GENE MAP LOOKUP (with Q-value ranking) ──
     const existingGene = this.geneMap.lookup(failure.code, failure.category);
@@ -378,6 +390,12 @@ export class PcecEngine {
         immuneHits: this.stats.immuneHits, geneCount: this.geneMap.immuneCount(),
       });
 
+      // OPT-4: Update context + OPT-10: Attribution
+      this.geneMap.updateContext(failure.code, failure.category, true, { chain: (context?.chainId as number)?.toString(), platform: failure.platform });
+      this.geneMap.recordAttribution({ repairId, agentId: this.agentId, stepId: context?.stepId as string, workflow: context?.workflow as string, failureCode: failure.code, category: failure.category, strategy: winner.strategy, success: true });
+
+      const attribution = { agentId: this.agentId, stepId: context?.stepId as string, workflow: context?.workflow as string, timestamp: Date.now() };
+
       return makeResult({
         success: true, mode, verified: true,
         explanation: explanation + '\n✓ Verified',
@@ -385,11 +403,15 @@ export class PcecEngine {
         gene: this.geneMap.lookup(failure.code, failure.category) ?? gene,
         totalMs, revenueProtected: revenue,
         costEstimate: winner.estimatedCostUsd, skippedStrategies,
+        attribution,
       });
     }
 
     // Verify failed
     this.geneMap.logRepairFailed(repairId);
+    this.geneMap.updateContext(failure.code, failure.category, false, { chain: (context?.chainId as number)?.toString(), platform: failure.platform });
+    this.geneMap.recordFailureAnalysis(failure.code, failure.category, `Strategy '${winner.strategy}' failed: ${commitResult.description}`);
+    this.geneMap.recordAttribution({ repairId, agentId: this.agentId, stepId: context?.stepId as string, workflow: context?.workflow as string, failureCode: failure.code, category: failure.category, strategy: winner.strategy, success: false });
     if (existingGene) {
       this.geneMap.recordFailure(failure.code, failure.category);
     }
@@ -398,6 +420,7 @@ export class PcecEngine {
       failure, mode, candidates: scored, winner, totalMs,
       explanation: explanation + '\n✗ Verification failed',
       costEstimate: winner.estimatedCostUsd, skippedStrategies,
+      attribution: { agentId: this.agentId, stepId: context?.stepId as string, workflow: context?.workflow as string, timestamp: Date.now() },
     });
   }
 

@@ -37,3 +37,6 @@ export { registerShutdownHandler } from './engine/lifecycle.js';
 export { getRootCause } from './engine/root-causes.js';
 export type { RootCause } from './engine/root-causes.js';
 export { SEED_GENES } from './engine/seed-genes.js';
+export { validateStrategyParams, STRATEGY_SCHEMAS } from './engine/strategy-schemas.js';
+export { simulate, simulateAsync } from './testing.js';
+export type { SimulateOptions, SimulateResult } from './testing.js';
