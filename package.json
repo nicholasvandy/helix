@@ -8,7 +8,7 @@
     "dashboard"
   ],
   "scripts": {
-    "build": "npm run build -w packages/core",
+    "build": "npm run build -w packages/core && npx tsc -p packages/api/tsconfig.json",
     "build:mcp": "npm run build -w packages/mcp",
     "test": "npm run test -w packages/core",
     "demo": "tsx examples/demo-all/run.ts",
@@ -20,7 +20,7 @@
     "mcp": "tsx packages/mcp/src/server.ts",
     "api": "tsx packages/api/src/server.ts",
     "typecheck": "tsc --noEmit -p packages/core/tsconfig.json",
-    "start": "npm run build && node packages/api/dist/server.js"
+    "start": "node packages/api/dist/server.js"
   },
   "devDependencies": {
     "tsx": "^4.0.0",
