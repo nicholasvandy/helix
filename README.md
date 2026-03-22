@@ -188,6 +188,10 @@ Listed on [mppscan.com](https://mppscan.com).
 | A-Mem | Gene relationship links |
 | Who&When | Failure attribution |
 
+## Docs
+
+📖 [User Runbook](docs/RUNBOOK.md) — Complete guide from installation to production
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
