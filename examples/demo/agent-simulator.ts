@@ -24,6 +24,8 @@ const pub = createPublicClient({ chain: baseSepolia, transport: http(RPC) });
 const GENE_DB = '/tmp/helix-demo.db';
 try { unlinkSync(GENE_DB); } catch {}
 const geneMap = new GeneMap(GENE_DB);
+(geneMap as any).db.exec('DELETE FROM genes');  // Start fresh for demo — show repair → immune journey
+(geneMap as any).cache.clear();
 const engine = new PcecEngine(geneMap, 'demo', { mode: 'auto', provider: { rpcUrl: RPC } });
 for (const a of defaultAdapters) engine.registerAdapter(a);
 
