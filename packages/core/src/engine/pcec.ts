@@ -248,6 +248,16 @@ export class PcecEngine {
         this.geneMap.recordFailure(failure.code, failure.category);
       }
 
+      // Async LLM reasoning for immune genes with empty reasoning
+      if (this.options.llm?.enabled && verified && existingGene.successCount >= 3 && (!existingGene.reasoning || existingGene.reasoning.length < 20)) {
+        const fc = failure.code, fcat = failure.category, strat = existingGene.strategy, llmOpts = this.options.llm;
+        import('./llm.js').then(({ llmGenerateReasoning }) => {
+          llmGenerateReasoning(error.message, strat, llmOpts).then(r => {
+            if (r && r.length > 10) this.geneMap.updateReasoning(fc, fcat, r);
+          }).catch(() => {});
+        }).catch(() => {});
+      }
+
       this.cycleCount = 0;
       return makeResult({
         success: verified, immune: true, mode, verified,
@@ -404,6 +414,23 @@ export class PcecEngine {
         totalRepairs: this.stats.repairs, savedRevenue: this.stats.savedRevenue,
         immuneHits: this.stats.immuneHits, geneCount: this.geneMap.immuneCount(),
       });
+
+      // ── Async LLM Reasoning (fire and forget) ──
+      if (this.options.llm?.enabled) {
+        const storedGene = this.geneMap.lookup(failure.code, failure.category);
+        if (storedGene && storedGene.successCount >= 3 && (!storedGene.reasoning || storedGene.reasoning.length < 20)) {
+          const fc = failure.code, fcat = failure.category, strat = winner.strategy;
+          const llmOpts = this.options.llm;
+          import('./llm.js').then(({ llmGenerateReasoning }) => {
+            llmGenerateReasoning(error.message, strat, llmOpts).then(reasoning => {
+              if (reasoning && reasoning.length > 10) {
+                this.geneMap.updateReasoning(fc, fcat, reasoning);
+                bus.emit('gene', this.agentId, { type: 'reasoning', code: fc, category: fcat, strategy: strat, reasoning });
+              }
+            }).catch(() => {});
+          }).catch(() => {});
+        }
+      }
 
       // OPT-4: Update context + OPT-10: Attribution
       this.geneMap.updateContext(failure.code, failure.category, true, { chain: (context?.chainId as number)?.toString(), platform: failure.platform });

@@ -109,6 +109,22 @@ function agentStats(agentId: string) {
       agentStats(id);
       break;
     }
+    case 'explain': {
+      const msg = process.argv[3];
+      if (!msg) { console.error('Usage: npx helix explain "error message"'); process.exit(1); }
+      const eng = createEngine({ mode: 'observe', agentId: 'cli', geneMapPath: ':memory:' } as WrapOptions);
+      const r = await eng.repair(new Error(msg));
+      const g = eng.getGeneMap().lookup(r.failure.code as any, r.failure.category as any);
+      console.log(`\n  Code:      ${r.failure.code}`);
+      console.log(`  Category:  ${r.failure.category}`);
+      console.log(`  Strategy:  ${r.winner?.strategy ?? r.gene?.strategy ?? 'none'}`);
+      console.log(`  Q-Value:   ${g?.qValue?.toFixed(3) ?? 'N/A'}`);
+      console.log(`  Immune:    ${r.immune ? 'yes ⚡' : 'no'}`);
+      console.log(`  Reasoning: ${g?.reasoning || '(not generated — enable LLM)'}`);
+      console.log(`  Root cause: ${r.failure.rootCauseHint ?? 'N/A'}\n`);
+      eng.getGeneMap().close();
+      break;
+    }
     case 'help': case '--help': case '-h': case undefined: printHelp(); break;
     default: console.error(`Unknown command: ${command}`); printHelp(); process.exit(1);
   }

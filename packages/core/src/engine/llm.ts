@@ -116,12 +116,37 @@ export async function llmGenerateReasoning(errorMessage: string, strategy: strin
   const provider = config.provider ?? 'anthropic';
   const key = config.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.HELIX_LLM_API_KEY;
   if (!key) return null;
-  const prompt = `Error: "${errorMessage}"\nRepaired with: "${strategy}"\nIn one sentence, explain WHY this strategy works.`;
+
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), config.timeoutMs ?? 8000);
+  const userMsg = `Error: "${errorMessage}"\nRepaired with: "${strategy}"\nIn one plain-text sentence (no JSON, no markdown), explain WHY this strategy fixes this error.`;
+  const sysMsg = 'You explain why a repair strategy works for a given error. Respond with ONE plain-text sentence only. No JSON, no markdown, no quotes.';
+
   try {
-    const text = provider === 'anthropic' ? await callAnthropic(prompt, key, config.model, ctrl.signal) : await callOpenAI(prompt, key, config.model, ctrl.signal);
+    let text: string;
+    if (provider === 'anthropic') {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: config.model ?? 'claude-sonnet-4-20250514', max_tokens: 150, system: sysMsg, messages: [{ role: 'user', content: userMsg }] }),
+        signal: ctrl.signal,
+      });
+      if (!r.ok) throw new Error(`${r.status}`);
+      const d = await r.json() as { content?: { text: string }[] };
+      text = d.content?.[0]?.text ?? '';
+    } else {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: config.model ?? 'gpt-4o-mini', max_tokens: 150, temperature: 0, messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: userMsg }] }),
+        signal: ctrl.signal,
+      });
+      if (!r.ok) throw new Error(`${r.status}`);
+      const d = await r.json() as { choices?: { message: { content: string } }[] };
+      text = d.choices?.[0]?.message?.content ?? '';
+    }
     clearTimeout(timer);
-    return text.trim().slice(0, 500);
+    const cleaned = text.trim().replace(/^["']|["']$/g, '').replace(/```\w*\n?|```/g, '').trim().slice(0, 300);
+    return cleaned.length > 10 ? cleaned : null;
   } catch { clearTimeout(timer); return null; }
 }
