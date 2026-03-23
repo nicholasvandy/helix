@@ -45,7 +45,7 @@
   .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.4); margin-bottom: 12px; }
 
   /* Live Feed */
-  #live-feed { max-height: 620px; overflow: hidden; }
+  #live-feed { max-height: 620px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
   .feed-list { display: flex; flex-direction: column; gap: 8px; }
   .event-card { padding: 12px 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 8px; animation: slideIn 0.35s ease-out; }
   @keyframes slideIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
@@ -318,6 +318,68 @@
     renderFeed();
   }
 
+  // --- Transform server data to dashboard format ---
+  function transformStats(d) {
+    // KPIs
+    var failures = d.totalFailures || 0;
+    var repaired = d.totalRepaired || 0;
+    var immune = d.totalImmune || 0;
+    var revenue = d.revenueProtected || 0;
+    var rate = failures > 0 ? Math.round((repaired / failures) * 100) : 0;
+    updateKPIs({ failures: failures, repaired: repaired, immune: immune, revenue: revenue, rate: rate });
+
+    // Agent health (server sends object, dashboard wants array)
+    if (d.agents && typeof d.agents === 'object') {
+      var agentArr = [];
+      for (var key in d.agents) {
+        var a = d.agents[key];
+        var pct = a.failures > 0 ? Math.round((a.repaired / a.failures) * 100) : 100;
+        agentArr.push({ name: key, health: pct, icon: a.icon });
+      }
+      renderAgentHealth(agentArr);
+    }
+
+    // Gene map (server sends object, dashboard wants array)
+    if (d.genes && typeof d.genes === 'object') {
+      var geneArr = [];
+      for (var gk in d.genes) {
+        var g = d.genes[gk];
+        geneArr.push({ name: g.strategy, qValue: g.qValue, hits: g.hits });
+      }
+      geneArr.sort(function(a, b) { return b.qValue - a.qValue; });
+      renderGeneMap(geneArr);
+    }
+
+    // Error distribution (server sends object, dashboard wants array)
+    if (d.errorTypes && typeof d.errorTypes === 'object') {
+      var distArr = [];
+      for (var ek in d.errorTypes) {
+        distArr.push({ label: ek, count: d.errorTypes[ek] });
+      }
+      distArr.sort(function(a, b) { return b.count - a.count; });
+      renderErrorDist(distArr);
+    }
+
+    // Footer
+    if (d.startTime) startTime = d.startTime;
+    var geneCount = d.genes ? Object.keys(d.genes).length : 0;
+    updateFooter({ geneCount: geneCount });
+  }
+
+  // --- Transform event data for feed ---
+  function transformEvent(d) {
+    return {
+      agent: d.agentId || d.agent || 'unknown',
+      timestamp: d.timestamp || Date.now(),
+      errorType: d.errorType || 'error',
+      message: (d.error || d.action || '').slice(0, 80),
+      result: d.immune ? 'immune' : d.repaired ? 'repaired' : 'failed',
+      strategy: d.strategy || 'none',
+      source: d.source || '',
+      elapsed: d.elapsed ? d.elapsed + 'ms' : '—',
+    };
+  }
+
   // --- SSE ---
   function connectSSE() {
     if (sse) { try { sse.close(); } catch(e) {} }
@@ -328,24 +390,20 @@
       document.getElementById('status-text').style.color = '#4ade80';
     };
     sse.onmessage = function(msg) {
-      let data;
+      var data;
       try { data = JSON.parse(msg.data); } catch(e) { return; }
       if (data.type === 'init') {
-        if (data.events) { events = data.events.slice(0, MAX_EVENTS); totalEvents = data.totalEvents || events.length; renderFeed(); }
-        if (data.stats) updateKPIs(data.stats);
-        if (data.agents) renderAgentHealth(data.agents);
-        if (data.genes) renderGeneMap(data.genes);
-        if (data.errorDist) renderErrorDist(data.errorDist);
-        if (data.stats) updateFooter(data.stats);
-        if (data.startTime) startTime = data.startTime;
+        // Init has events array + all stats fields at top level
+        if (data.events) {
+          events = data.events.map(transformEvent).slice(0, MAX_EVENTS);
+          totalEvents = data.totalFailures || events.length;
+          renderFeed();
+        }
+        transformStats(data);
       } else if (data.type === 'event') {
-        addEvent(data);
+        addEvent(transformEvent(data));
       } else if (data.type === 'stats') {
-        updateKPIs(data);
-        if (data.agents) renderAgentHealth(data.agents);
-        if (data.genes) renderGeneMap(data.genes);
-        if (data.errorDist) renderErrorDist(data.errorDist);
-        updateFooter(data);
+        transformStats(data);
       } else if (data.type === 'systematic') {
         showSystematic(data);
       }
