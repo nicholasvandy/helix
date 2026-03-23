@@ -56,6 +56,8 @@ export interface FailureClassification {
   details: string;
   timestamp: number;
   rootCauseHint?: string;
+  llmClassified?: boolean;
+  llmReasoning?: string;
   actualBalance?: number;
   requiredAmount?: number;
   chainId?: number;
@@ -197,9 +199,11 @@ export interface WrapOptions {
   onFailure?: (result: RepairResult) => void;
   onHelixError?: (error: Error) => void;
   onSystematic?: (warning: string, failure: FailureClassification) => void;
-  /** Apply repair overrides to function args for retry. Called when a strategy produces overrides (e.g. corrected nonce). */
+  /** Apply repair overrides to function args for retry. */
   parameterModifier?: (args: unknown[], overrides: Record<string, unknown>, strategy: string) => unknown[];
   context?: Record<string, unknown>;
+  /** LLM fallback for classifying unknown errors. Disabled by default. */
+  llm?: { provider: 'anthropic' | 'openai'; apiKey?: string; model?: string; timeoutMs?: number; enabled?: boolean };
 }
 
 // ── Revenue estimates per category ──────────────────────────────

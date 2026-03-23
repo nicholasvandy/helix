@@ -165,11 +165,25 @@ export class PcecEngine {
     }
 
     // ── PERCEIVE ──
-    const failure = this.perceive(error, context);
+    let failure = this.perceive(error, context);
+
+    // ── LLM FALLBACK (only if perceive returned unknown + LLM enabled) ──
+    if (failure.code === 'unknown' && this.options.llm?.enabled) {
+      try {
+        const { llmClassify } = await import('./llm.js');
+        const llmResult = await llmClassify(error.message, this.options.llm);
+        if (llmResult && llmResult.code !== 'unknown') {
+          failure = llmResult;
+          const rc = getRootCause(failure.code, failure.category);
+          if (rc) failure.rootCauseHint = rc.hint;
+        }
+      } catch { /* LLM failed, continue with unknown */ }
+    }
+
     bus.emit('perceive', this.agentId, {
       code: failure.code, category: failure.category,
       severity: failure.severity, platform: failure.platform,
-      details: failure.details,
+      details: failure.details, llmClassified: failure.llmClassified,
     });
 
     // ── D6: Systematic failure detection ──

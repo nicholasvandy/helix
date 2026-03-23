@@ -250,6 +250,11 @@ export class GeneMap {
     return { totalRepairs: total, topAgents: agents.map(a => ({ agentId: a.agent_id, failures: a.cnt })), topCategories: cats.map(c => ({ category: c.category, count: c.cnt })), overallSuccessRate: total > 0 ? ok / total : 0 };
   }
 
+  updateReasoning(code: string, category: string, reasoning: string): void {
+    this.db.prepare('UPDATE genes SET reasoning = ? WHERE failure_code = ? AND category = ?').run(reasoning, code, category);
+    this.cache.delete(this.cacheKey(code, category));
+  }
+
   // ── Gene Links (OPT-5: A-Mem paper) ──
 
   recordCoOccurrence(codeA: string, catA: string, codeB: string, catB: string): void {
