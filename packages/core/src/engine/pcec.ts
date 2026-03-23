@@ -278,6 +278,20 @@ export class PcecEngine {
     // ── CONSTRUCT ──
     let candidates = this.constructCandidates(failure);
 
+    // ── LLM CONSTRUCT FALLBACK (when no adapter has strategies) ──
+    if (candidates.length === 0 && this.options.llm?.enabled) {
+      try {
+        const { llmConstructCandidates } = await import('./llm.js');
+        const llmCandidates = await llmConstructCandidates(failure, error.message, this.options.llm);
+        if (llmCandidates && llmCandidates.length > 0) {
+          candidates = llmCandidates;
+          if (this.options.verbose) {
+            console.log(`\x1b[35m[helix] LLM suggested ${candidates.length} strategies: ${candidates.map(c => c.strategy).join(', ')}\x1b[0m`);
+          }
+        }
+      } catch { /* LLM failed */ }
+    }
+
     // ── FILTER: blocklist/allowlist ──
     const skippedStrategies: string[] = [];
     if (this.options.blockStrategies?.length) {

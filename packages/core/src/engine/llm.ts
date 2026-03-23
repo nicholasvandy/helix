@@ -3,7 +3,7 @@
  * Supports Anthropic Claude and OpenAI GPT. Results cached in Gene Map.
  */
 
-import type { FailureClassification, ErrorCode, FailureCategory, Severity, Platform } from './types.js';
+import type { FailureClassification, ErrorCode, FailureCategory, Severity, Platform, RepairCandidate } from './types.js';
 
 export interface LlmConfig {
   /** Primary provider. Default: 'anthropic' */
@@ -148,5 +148,74 @@ export async function llmGenerateReasoning(errorMessage: string, strategy: strin
     clearTimeout(timer);
     const cleaned = text.trim().replace(/^["']|["']$/g, '').replace(/```\w*\n?|```/g, '').trim().slice(0, 300);
     return cleaned.length > 10 ? cleaned : null;
+  } catch { clearTimeout(timer); return null; }
+}
+
+// ── LLM Construct: suggest strategies for unknown errors ──
+
+const VALID_STRATEGIES = [
+  'backoff_retry', 'retry', 'retry_with_receipt', 'reduce_request',
+  'fix_params', 'switch_endpoint', 'hold_and_notify', 'extend_deadline',
+  'refresh_nonce', 'switch_network', 'get_balance',
+  'self_pay_gas', 'cancel_pending_txs', 'speed_up_transaction',
+  'split_transaction', 'swap_currency', 'topup_from_reserve',
+  'renew_session', 'remove_and_resubmit', 'refund_waterfall', 'switch_service',
+];
+
+const CONSTRUCT_SYS = `You select repair strategies for AI agent payment errors. Pick 1-3 from:
+Category A (safe): backoff_retry, retry, retry_with_receipt, reduce_request, fix_params, switch_endpoint, hold_and_notify, extend_deadline
+Category B (chain read): refresh_nonce, switch_network, get_balance
+Category C (chain write): self_pay_gas, cancel_pending_txs, speed_up_transaction, split_transaction, swap_currency, topup_from_reserve
+Category D (orchestration): renew_session, remove_and_resubmit, refund_waterfall, switch_service
+
+Rules: ONLY exact names from above. confidence 0.1-0.7. Prefer Category A. JSON array only, no markdown:
+[{"strategy":"name","confidence":0.5,"reasoning":"why"}]`;
+
+export async function llmConstructCandidates(
+  failure: FailureClassification, errorMessage: string, config: LlmConfig,
+): Promise<RepairCandidate[] | null> {
+  if (config.enabled === false) return null;
+  const provider = config.provider ?? 'anthropic';
+  const key = config.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.HELIX_LLM_API_KEY;
+  if (!key) return null;
+
+  const userMsg = `Error: code="${failure.code}", category="${failure.category}", severity="${failure.severity}"\nMessage: "${errorMessage.slice(0, 200)}"\nPick 1-3 strategies. JSON array only.`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), config.timeoutMs ?? 8000);
+
+  try {
+    let text: string;
+    if (provider === 'anthropic') {
+      const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: config.model ?? 'claude-sonnet-4-20250514', max_tokens: 200, system: CONSTRUCT_SYS, messages: [{ role: 'user', content: userMsg }] }), signal: ctrl.signal });
+      if (!r.ok) throw new Error(`${r.status}`);
+      const d = await r.json() as { content?: { text: string }[] };
+      text = d.content?.[0]?.text ?? '';
+    } else {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }, body: JSON.stringify({ model: config.model ?? 'gpt-4o-mini', max_tokens: 200, temperature: 0, messages: [{ role: 'system', content: CONSTRUCT_SYS }, { role: 'user', content: userMsg }] }), signal: ctrl.signal });
+      if (!r.ok) throw new Error(`${r.status}`);
+      const d = await r.json() as { choices?: { message: { content: string } }[] };
+      text = d.choices?.[0]?.message?.content ?? '';
+    }
+    clearTimeout(timer);
+
+    const parsed = JSON.parse(text.trim().replace(/```json\n?|```/g, ''));
+    if (!Array.isArray(parsed)) return null;
+
+    const candidates: RepairCandidate[] = parsed
+      .filter((c: any) => c.strategy && VALID_STRATEGIES.includes(c.strategy))
+      .map((c: any) => ({
+        id: `llm_${c.strategy}`, strategy: c.strategy,
+        description: String(c.reasoning ?? `LLM suggested: ${c.strategy}`).slice(0, 200),
+        estimatedCostUsd: /swap|topup|self_pay|speed_up|cancel/.test(c.strategy) ? 0.05 : 0,
+        estimatedSpeedMs: c.strategy === 'backoff_retry' ? 2000 : c.strategy === 'retry_with_receipt' ? 1000 : 500,
+        requirements: [], score: 0,
+        successProbability: Math.min(0.7, Math.max(0.1, Number(c.confidence) || 0.5)),
+        platform: 'generic' as Platform,
+        source: 'llm' as const,
+        reasoning: String(c.reasoning ?? '').slice(0, 200),
+      }))
+      .slice(0, 3);
+
+    return candidates.length > 0 ? candidates : null;
   } catch { clearTimeout(timer); return null; }
 }

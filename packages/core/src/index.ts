@@ -33,7 +33,7 @@ export { EventBus, bus } from './engine/bus.js';
 export { evaluate } from './engine/evaluate.js';
 export { HelixProvider } from './engine/provider.js';
 export { detectSignature, applyOverrides } from './engine/auto-detect.js';
-export { llmClassify, llmGenerateReasoning } from './engine/llm.js';
+export { llmClassify, llmConstructCandidates, llmGenerateReasoning } from './engine/llm.js';
 export type { LlmConfig } from './engine/llm.js';
 export { getDexPreset, DEX_PRESETS } from './engine/dex-presets.js';
 export { registerShutdownHandler } from './engine/lifecycle.js';

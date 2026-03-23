@@ -74,6 +74,8 @@ export interface RepairCandidate {
   score: number;
   successProbability: number;
   platform: Platform;
+  source?: 'adapter' | 'gene' | 'llm';
+  reasoning?: string;
 }
 
 export interface GeneCapsule {
