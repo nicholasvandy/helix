@@ -64,7 +64,7 @@ export async function llmClassify(errorMessage: string, config: LlmConfig): Prom
 
 async function tryLlm(errorMessage: string, provider: 'anthropic' | 'openai', apiKey: string, model: string | undefined, timeoutMs: number | undefined): Promise<FailureClassification | null> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs ?? 2000);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs ?? 8000);
   try {
     const text = provider === 'anthropic'
       ? await callAnthropic(errorMessage, apiKey, model, ctrl.signal)
@@ -118,7 +118,7 @@ export async function llmGenerateReasoning(errorMessage: string, strategy: strin
   if (!key) return null;
   const prompt = `Error: "${errorMessage}"\nRepaired with: "${strategy}"\nIn one sentence, explain WHY this strategy works.`;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 3000);
+  const timer = setTimeout(() => ctrl.abort(), config.timeoutMs ?? 8000);
   try {
     const text = provider === 'anthropic' ? await callAnthropic(prompt, key, config.model, ctrl.signal) : await callOpenAI(prompt, key, config.model, ctrl.signal);
     clearTimeout(timer);
