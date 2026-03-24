@@ -8,7 +8,7 @@ Every payment failure on the internet should only need to be solved once.
 
 [![CI](https://github.com/adrianhihi/helix/actions/workflows/ci.yml/badge.svg)](https://github.com/adrianhihi/helix/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@helix-agent/core)](https://www.npmjs.com/package/@helix-agent/core)
-[![tests](https://img.shields.io/badge/tests-174%20passing-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-288%20passing-brightgreen)]()
 [![license](https://img.shields.io/npm/l/@helix-agent/core)](LICENSE)
 
 [Quick Start](#quick-start) · [How It Works](#how-it-works) · [API](#api) · [Dashboard](#dashboard) · [MCP Server](#mcp-server)
@@ -71,6 +71,7 @@ const result = await safePay({ to: '0x...', amount: '1.0' });
 | **Commit** | Execute the winning strategy (if mode allows) | varies |
 | **Verify** | Validate the repair actually worked (SAGE paper) | <1ms |
 | **Gene** | Store successful fix in Gene Map for future immunity | <1ms |
+| **Predict** | Predict next likely failure, preload Gene into cache | <1ms |
 
 ### Gene Map — Collective Immunity
 
@@ -82,6 +83,11 @@ The Gene Map is a local database of proven repair strategies:
 - **Root cause hints** (MAST paper) — systematic failures get flagged
 - **Failure attribution** — track which agent, which step, which workflow
 - **Gene links** (A-Mem paper) — co-occurring failures are linked
+- **Adaptive α** — new Genes learn fast, old Genes stay stable
+- **Bayesian Q ± σ** — tracks uncertainty, Thompson Sampling for exploration
+- **Context-aware lookup** — adjusts Q-value based on gas price, time, chain ID
+- **Predictive Failure Graph** — predicts next error, preloads Gene
+- **Strategy Chains** — multi-step repairs [refresh_nonce → speed_up_transaction]
 
 ### Three Safety Modes
 
@@ -101,7 +107,7 @@ The Gene Map is a local database of proven repair strategies:
 | **Generic HTTP** | 3 | 429, 500, timeout |
 | **Any** | ∞ | `wrap()` works on any async function |
 
-**31 scenarios. 25 real strategies. 5 platforms.**
+**31 scenarios. 26 real strategies. 5 platforms. 288 tests across 32 files.**
 
 ## API
 
@@ -115,6 +121,9 @@ const safeFn = wrap(myFunction, {
   blockStrategies: ['self_pay_gas'],
   onRepair: (result) => console.log(result),
   onSystematic: (alert) => pagerduty.trigger(alert),
+  verify: (result, args) => result.amount === args[0].amount,
+  otel: { tracer, meter },
+  registry: { url: 'https://registry.helix-agent.dev' },
 });
 ```
 
@@ -149,6 +158,8 @@ npx helix status                              # Gene Map health
 npx helix simulate "AA25 Invalid account nonce" # dry-run diagnosis
 npx helix gc                                   # garbage collection
 npx helix stats bot-1                          # agent attribution
+npx helix audit                                # repair audit log
+npx helix audit --json                         # export for SIEM
 ```
 
 ## Dashboard
@@ -188,6 +199,14 @@ Listed on [mppscan.com](https://mppscan.com).
 | ReasoningBank | Gene reasoning fields |
 | A-Mem | Gene relationship links |
 | Who&When | Failure attribution |
+
+## What's New in v1.5
+
+- **Error Embedding** — 28 known error signatures, fuzzy matching when exact match fails
+- **Strategy A/B Testing** — controlled experiments, 90/10 traffic split, auto-evaluation
+- **Gene Registry** — push/pull shared repair knowledge across instances
+- **OpenTelemetry** — optional tracing spans + metrics for Datadog/Grafana
+- **Audit Log** — every repair recorded, exportable for compliance
 
 ## Docs
 
