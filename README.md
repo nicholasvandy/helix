@@ -200,14 +200,6 @@ Listed on [mppscan.com](https://mppscan.com).
 | A-Mem | Gene relationship links |
 | Who&When | Failure attribution |
 
-## What's New in v1.5
-
-- **Error Embedding** — 28 known error signatures, fuzzy matching when exact match fails
-- **Strategy A/B Testing** — controlled experiments, 90/10 traffic split, auto-evaluation
-- **Gene Registry** — push/pull shared repair knowledge across instances
-- **OpenTelemetry** — optional tracing spans + metrics for Datadog/Grafana
-- **Audit Log** — every repair recorded, exportable for compliance
-
 ## Technology Roadmap
 
 ### Causal Repair Graph
@@ -232,14 +224,25 @@ Four-layer defense against Gene Registry poisoning: reputation scoring, multi-ag
 
 ## Gene Map Architecture Evolution
 
-```
-v1.0  Gene Map         — Local SQLite, fixed α, string matching
-v1.2  + LLM Fallback   — Claude/GPT classify unknown errors
-v1.3  + Adaptive RL     — Bayesian Q ± σ, Thompson Sampling, strategy chains
-v1.4  + Otel + Audit    — OpenTelemetry spans, repair audit log
-v1.5  + Registry + AI   — Gene Registry, error embedding, A/B testing
-next  + Causal + Federated — Causal repair graphs, federated learning
-```
+Phase 1 (current): SQLite — local-first, zero-dependency, single-agent
+Phase 2 (next):    PostgreSQL + pgvector — vector semantic error matching
+Phase 3:           Temporal Knowledge Graph — causal relationships + time-aware
+Phase 4:           Federated Learning — privacy-preserving distributed RL
+
+The Gene Map evolves from a local repair cache into a distributed temporal knowledge graph with federated learning — the collective intelligence layer for the autonomous agent economy.
+
+## What's New in v1.5
+
+- **Error Embedding** — 28 known error signatures, fuzzy matching when exact match fails
+- **Strategy A/B Testing** — controlled experiments, 90/10 traffic split, auto-evaluation
+- **Gene Registry** — push/pull shared repair knowledge across instances
+- **OpenTelemetry** — optional tracing spans + metrics for Datadog/Grafana
+- **Audit Log** — every repair recorded, exportable for compliance
+- **Predictive Failure Graph** — transition probability matrix, preloads likely next failure
+- **Context-Aware Gene Map** — Q-value adjusted by gas price, time, chain ID
+- **Adaptive Bayesian Q-values** — Thompson Sampling, uncertainty tracking
+- **Strategy Chains** — multi-step compound repairs [refresh_nonce → speed_up]
+- **Business-Level Verify** — custom verification callbacks
 
 ## Docs
 
