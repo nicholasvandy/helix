@@ -18,6 +18,7 @@ import { getRootCause } from './root-causes.js';
 import { detectStrategyChain, isChainStrategy, parseChainSteps } from './chain.js';
 import { executeChain } from './chain-executor.js';
 import { HelixOtel, NOOP_OTEL } from './otel.js';
+import { GeneRegistryClient } from './gene-registry.js';
 
 // Category C strategies that move funds — require 'full' mode
 const FUND_MOVEMENT_STRATEGIES = [
@@ -61,6 +62,7 @@ export class PcecEngine {
   /** Predictive Failure Graph: last failure for transition tracking */
   private lastFailure: { code: string; category: string; timestamp: number } | null = null;
   private otel: HelixOtel;
+  private registry?: GeneRegistryClient;
 
   constructor(geneMap: GeneMap, agentId: string = 'default', options?: WrapOptions) {
     this.geneMap = geneMap;
@@ -68,6 +70,18 @@ export class PcecEngine {
     this.options = options ?? {};
     this.provider = new HelixProvider(options?.provider);
     this.otel = options?.otel ? new HelixOtel(options.otel) : NOOP_OTEL;
+    if (options?.registry?.url) {
+      this.registry = new GeneRegistryClient({ ...options.registry, agentId: this.agentId });
+      this.registry.startAutoSync(this.geneMap);
+    }
+  }
+
+  /** Manually sync with Gene Registry (push local + pull remote). */
+  async syncRegistry(): Promise<{ pushed: number; pulled: number }> {
+    if (!this.registry) return { pushed: 0, pulled: 0 };
+    const pushResult = await this.registry.push(this.geneMap);
+    const pullResult = await this.registry.pull(this.geneMap);
+    return { pushed: pushResult.pushed, pulled: pullResult.pulled };
   }
 
   private checkSystematic(failure: FailureClassification): string | null {

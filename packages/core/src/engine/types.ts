@@ -264,6 +264,8 @@ export interface WrapOptions {
   verify?: (result: unknown, originalArgs: unknown[]) => Promise<boolean> | boolean;
   /** OpenTelemetry configuration. Provide your own tracer/meter for distributed tracing and metrics. */
   otel?: { tracer?: any; meter?: any; serviceName?: string };
+  /** Gene Registry configuration for shared learning across instances. */
+  registry?: { url?: string; apiKey?: string; agentId?: string; minQualityForPush?: number; minQualityForPull?: number; syncIntervalMs?: number; pushBatchSize?: number; pullBatchSize?: number };
 }
 
 // ── Revenue estimates per category ──────────────────────────────

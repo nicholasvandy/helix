@@ -46,6 +46,8 @@ export { getDexPreset, DEX_PRESETS } from './engine/dex-presets.js';
 export { detectStrategyChain, isChainStrategy, parseChainSteps } from './engine/chain.js';
 export { HelixOtel, NOOP_OTEL } from './engine/otel.js';
 export type { OtelConfig } from './engine/otel.js';
+export { GeneRegistryClient } from './engine/gene-registry.js';
+export type { GeneRegistryConfig, RegistryGene } from './engine/gene-registry.js';
 export { registerShutdownHandler } from './engine/lifecycle.js';
 export { getRootCause } from './engine/root-causes.js';
 export type { RootCause } from './engine/root-causes.js';
