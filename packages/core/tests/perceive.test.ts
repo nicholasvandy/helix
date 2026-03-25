@@ -139,6 +139,15 @@ describe('Privy perceive', () => {
     const r = privyPerceive(error);
     expect(r).toBeNull();
   });
+
+  it('perceives privy signing failure', () => {
+    const error = new Error('privy embedded wallet signing failed: key derivation error');
+    const r = privyPerceive(error);
+    expect(r).not.toBeNull();
+    expect(r!.code).toBe('verification-failed');
+    expect(r!.category).toBe('signature');
+    expect(r!.platform).toBe('privy');
+  });
 });
 
 describe('Generic perceive', () => {

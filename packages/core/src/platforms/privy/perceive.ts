@@ -34,5 +34,9 @@ export function privyPerceive(error: Error, _context?: Record<string, unknown>):
   if (msg.includes('broadcast') && (msg.includes('invalid') || msg.includes('malformed')))
     return { code: 'malformed-credential', category: 'service', severity: 'medium', platform: 'privy', details: msg, timestamp: Date.now() };
 
+  // #NEW-4: Embedded wallet signing failure — key derivation or HSM error
+  if (msg.includes('signing') && (msg.includes('failed') || msg.includes('error')) && (msg.includes('wallet') || msg.includes('key derivation') || msg.includes('privy')))
+    return { code: 'verification-failed', category: 'signature', severity: 'high', platform: 'privy', details: msg, timestamp: Date.now() };
+
   return null; // not a Privy error
 }
