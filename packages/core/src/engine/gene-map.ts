@@ -442,5 +442,8 @@ export class GeneMap {
   preload(code: ErrorCode, category: FailureCategory): void { this.predict.preload(code, category); }
   getLinks(code: string, category: string) { return this.predict.getLinks(code, category); }
 
+  /** Expose the underlying database for shared tables (e.g. gene_discoveries). */
+  get database(): import('better-sqlite3').Database { return this.db; }
+
   close(): void { this.db.close(); }
 }

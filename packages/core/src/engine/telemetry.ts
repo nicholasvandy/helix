@@ -2,6 +2,19 @@
  * Gene Telemetry — Anonymous reporting of new error discoveries.
  * Opt-in only. No addresses, keys, or tx hashes sent.
  */
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+let _version = '';
+function getHelixVersion(): string {
+  if (_version) return _version;
+  try {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '../../package.json');
+    _version = JSON.parse(readFileSync(pkgPath, 'utf-8')).version ?? 'unknown';
+  } catch { _version = 'unknown'; }
+  return _version;
+}
 
 export interface TelemetryEvent {
   errorPattern: string;
@@ -31,7 +44,9 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function sanitize(msg: string): string {
   return msg
-    .replace(/0x[a-fA-F0-9]{40,64}/g, '0x[REDACTED]')
+    .replace(/0x[a-fA-F0-9]{64}/g, '0x[REDACTED_64]')
+    .replace(/0x[a-fA-F0-9]{40}/g, '0x[ADDR]')
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
     .replace(/\d{10,}/g, '[NUM]')
     .replace(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/g, '[IP]')
     .replace(/https?:\/\/[^\s]+/g, '[URL]')
@@ -49,7 +64,7 @@ export function reportDiscovery(
     code: event.code, category: event.category, severity: event.severity,
     strategy: event.strategy, qValue: event.qValue, source: event.source,
     reasoning: event.reasoning?.slice(0, 200), llmProvider: event.llmProvider,
-    platform: event.platform, helixVersion: '1.1.0', timestamp: Date.now(),
+    platform: event.platform, helixVersion: getHelixVersion(), timestamp: Date.now(),
   };
 
   if (config.onTelemetry && !config.onTelemetry(te)) return;

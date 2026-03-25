@@ -29,7 +29,8 @@ describe('Gene Telemetry', () => {
     );
     expect(captured).not.toBeNull();
     expect(captured.errorPattern).not.toContain('742d35');
-    expect(captured.errorPattern).toContain('[REDACTED]');
+    expect(captured.errorPattern).toContain('[ADDR]');
+    expect(captured.errorPattern).toContain('[REDACTED_64]');
   });
 
   it('respects onTelemetry callback returning false', () => {

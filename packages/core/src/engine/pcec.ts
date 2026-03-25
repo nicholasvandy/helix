@@ -566,8 +566,8 @@ export class PcecEngine {
         }
       }
 
-      // ── Telemetry: report discovery ──
-      if (this.options.telemetry?.enabled) {
+      // ── Telemetry: only report LLM-discovered repairs (new knowledge) ──
+      if (this.options.telemetry?.enabled && (failure as any).llmClassified) {
         import('./telemetry.js').then(({ reportDiscovery }) => {
           reportDiscovery({
             errorMessage: error.message, code: failure.code, category: failure.category,

@@ -163,20 +163,52 @@ describe('REST API Server', () => {
   });
 
   it('POST /api/discoveries/:id/reject works', async () => {
-    // Submit another event to reject
     await fetch(`${BASE}/api/telemetry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        events: [{ errorPattern: 'reject-me', code: 'test', category: 'test', strategy: 'retry', platform: 'generic' }],
+        events: [{ errorPattern: 'reject-me', code: 'reject-test', category: 'test', strategy: 'retry', platform: 'generic' }],
       }),
     });
     const list = await (await fetch(`${BASE}/api/discoveries`)).json() as any[];
-    const target = list.find((d: any) => d.error_pattern === 'reject-me');
+    const target = list.find((d: any) => d.code === 'reject-test');
     if (target) {
       const res = await fetch(`${BASE}/api/discoveries/${target.id}/reject`, { method: 'POST' });
       const data = await res.json() as any;
       expect(data.rejected).toBe(true);
     }
+  });
+
+  it('deduplicates same discovery', async () => {
+    const event = {
+      errorPattern: 'dedup-test', code: 'test-dedup', category: 'test',
+      strategy: 'retry', platform: 'tempo', qValue: 0.6,
+    };
+    await fetch(`${BASE}/api/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events: [event] }),
+    });
+    await fetch(`${BASE}/api/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events: [{ ...event, qValue: 0.8 }] }),
+    });
+    const list = await (await fetch(`${BASE}/api/discoveries`)).json() as any[];
+    const dedup = list.filter((d: any) => d.code === 'test-dedup');
+    expect(dedup.length).toBe(1);
+    expect(dedup[0].report_count).toBe(2);
+  });
+
+  it('approve requires admin key when HELIX_ADMIN_KEY is set', async () => {
+    process.env.HELIX_ADMIN_KEY = 'test-secret-key';
+    const noAuth = await fetch(`${BASE}/api/discoveries/1/approve`, { method: 'POST' });
+    expect(noAuth.status).toBe(401);
+    const goodAuth = await fetch(`${BASE}/api/discoveries/1/approve`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer test-secret-key' },
+    });
+    expect(goodAuth.status).toBe(200);
+    delete process.env.HELIX_ADMIN_KEY;
   });
 });

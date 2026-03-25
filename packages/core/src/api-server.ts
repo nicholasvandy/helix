@@ -5,7 +5,6 @@
  * Start: npx helix serve [--port 7842] [--mode observe|auto|full]
  */
 import http from 'node:http';
-import Database from 'better-sqlite3';
 import { PcecEngine } from './engine/pcec.js';
 import { GeneMap } from './engine/gene-map.js';
 import { defaultAdapters } from './platforms/index.js';
@@ -57,10 +56,29 @@ export function createApiServer(opts: ApiServerOptions = {}) {
   for (const a of defaultAdapters) engine.registerAdapter(a);
 
   // Gene Collector database (shares the same SQLite file)
-  const collectorDb = (geneMap as any).db as Database.Database;
-  collectorDb.exec(`CREATE TABLE IF NOT EXISTS gene_discoveries (id INTEGER PRIMARY KEY AUTOINCREMENT, error_pattern TEXT NOT NULL, code TEXT NOT NULL, category TEXT NOT NULL, severity TEXT, strategy TEXT NOT NULL, q_value REAL, source TEXT, reasoning TEXT, llm_provider TEXT, platform TEXT, helix_version TEXT, reported_at INTEGER, reviewed INTEGER DEFAULT 0, approved INTEGER DEFAULT 0, created_at INTEGER DEFAULT (unixepoch()))`);
-  collectorDb.exec(`CREATE INDEX IF NOT EXISTS idx_discoveries_pattern ON gene_discoveries(error_pattern, code, category)`);
+  const collectorDb = geneMap.database;
+  collectorDb.exec(`CREATE TABLE IF NOT EXISTS gene_discoveries (id INTEGER PRIMARY KEY AUTOINCREMENT, error_pattern TEXT NOT NULL, code TEXT NOT NULL, category TEXT NOT NULL, severity TEXT, strategy TEXT NOT NULL, q_value REAL, source TEXT, reasoning TEXT, llm_provider TEXT, platform TEXT, helix_version TEXT, reported_at INTEGER, reviewed INTEGER DEFAULT 0, approved INTEGER DEFAULT 0, report_count INTEGER DEFAULT 1, avg_q REAL, created_at INTEGER DEFAULT (unixepoch()), updated_at INTEGER DEFAULT (unixepoch()))`);
+  collectorDb.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_discoveries_unique ON gene_discoveries(code, category, strategy, platform)`);
   collectorDb.exec(`CREATE INDEX IF NOT EXISTS idx_discoveries_reviewed ON gene_discoveries(reviewed)`);
+
+  // TTL cleanup: remove old rejected/unreviewed entries every hour
+  setInterval(() => {
+    try {
+      const cutoff = Math.floor(Date.now() / 1000) - (90 * 24 * 60 * 60);
+      collectorDb.prepare('DELETE FROM gene_discoveries WHERE reviewed = 1 AND approved = 0 AND created_at < ?').run(cutoff);
+      collectorDb.prepare('DELETE FROM gene_discoveries WHERE reviewed = 0 AND created_at < ?').run(cutoff);
+    } catch { /* ignore */ }
+  }, 60 * 60 * 1000);
+
+  function requireAdmin(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+    const adminKey = process.env.HELIX_ADMIN_KEY;
+    if (!adminKey) return true;
+    if (req.headers['authorization'] !== `Bearer ${adminKey}`) {
+      json(res, { error: 'Unauthorized' }, 401);
+      return false;
+    }
+    return true;
+  }
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
@@ -174,10 +192,10 @@ export function createApiServer(opts: ApiServerOptions = {}) {
           return json(res, { error: 'events array required' }, 400);
         }
         const batch = events.slice(0, 100);
-        const ins = collectorDb.prepare(`INSERT INTO gene_discoveries (error_pattern, code, category, severity, strategy, q_value, source, reasoning, llm_provider, platform, helix_version, reported_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+        const ins = collectorDb.prepare(`INSERT INTO gene_discoveries (error_pattern, code, category, severity, strategy, q_value, source, reasoning, llm_provider, platform, helix_version, reported_at, avg_q) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(code, category, strategy, platform) DO UPDATE SET report_count = report_count + 1, avg_q = (avg_q * report_count + excluded.q_value) / (report_count + 1), updated_at = unixepoch(), reasoning = COALESCE(excluded.reasoning, reasoning), helix_version = excluded.helix_version`);
         collectorDb.transaction(() => {
           for (const e of batch) {
-            ins.run(e.errorPattern, e.code, e.category, e.severity ?? 'medium', e.strategy, e.qValue ?? 0.5, e.source ?? 'unknown', e.reasoning, e.llmProvider, e.platform, e.helixVersion, e.timestamp ?? Date.now());
+            ins.run(e.errorPattern, e.code, e.category, e.severity ?? 'medium', e.strategy, e.qValue ?? 0.5, e.source ?? 'unknown', e.reasoning, e.llmProvider, e.platform ?? 'generic', e.helixVersion, e.timestamp ?? Date.now(), e.qValue ?? 0.5);
           }
         })();
         return json(res, { received: batch.length });
@@ -188,6 +206,7 @@ export function createApiServer(opts: ApiServerOptions = {}) {
 
     // GET /api/discoveries — list discoveries for review
     if (path === '/api/discoveries' && req.method === 'GET') {
+      if (!requireAdmin(req, res)) return;
       const approved = url.searchParams.get('approved') === 'true';
       const rows = approved
         ? collectorDb.prepare('SELECT * FROM gene_discoveries WHERE approved = 1 ORDER BY created_at DESC').all()
@@ -197,6 +216,7 @@ export function createApiServer(opts: ApiServerOptions = {}) {
 
     // POST /api/discoveries/:id/approve
     if (path.startsWith('/api/discoveries/') && path.endsWith('/approve') && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const id = path.split('/')[3];
       collectorDb.prepare('UPDATE gene_discoveries SET reviewed = 1, approved = 1 WHERE id = ?').run(id);
       return json(res, { approved: true });
@@ -204,6 +224,7 @@ export function createApiServer(opts: ApiServerOptions = {}) {
 
     // POST /api/discoveries/:id/reject
     if (path.startsWith('/api/discoveries/') && path.endsWith('/reject') && req.method === 'POST') {
+      if (!requireAdmin(req, res)) return;
       const id = path.split('/')[3];
       collectorDb.prepare('UPDATE gene_discoveries SET reviewed = 1, approved = 0 WHERE id = ?').run(id);
       return json(res, { rejected: true });
