@@ -25,6 +25,7 @@ SCENARIOS = {
     "mpp": "scenarios.mpp",
     "v17": "scenarios.v17",
     "coinbase": "scenarios.coinbase",
+    "coinbase_quick": "scenarios.coinbase_quick",
 }
 
 
