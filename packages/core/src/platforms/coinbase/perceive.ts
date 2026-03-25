@@ -77,6 +77,9 @@ export function coinbasePerceive(error: Error, _context?: Record<string, unknown
   if (msg.includes('INVALID_FIELDS') || msg.includes('-32602') || msg.includes('INVALID_ARGUMENT'))
     return { code: 'malformed-credential', category: 'service', severity: 'medium', platform, details: msg, timestamp: Date.now() };
 
+  if (msg.includes('paymaster') && (msg.includes('signature') || msg.includes('verification')))
+    return { code: 'verification-failed', category: 'signature', severity: 'high', platform, details: msg, timestamp: Date.now() };
+
   if (msg.includes('INTERNAL_ERROR') && msg.includes('paymaster'))
     return { code: 'server-error', category: 'service', severity: 'high', platform, details: msg, timestamp: Date.now() };
 
