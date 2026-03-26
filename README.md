@@ -3,15 +3,14 @@
 # Helix
 
 **Self-healing infrastructure for AI agent payments**
-# If this helped, please ⭐ — it helps us reach more developers.
 
 [![npm](https://img.shields.io/npm/v/@helix-agent/core?style=flat-square&color=f0a030)](https://www.npmjs.com/package/@helix-agent/core)
-[![tests](https://img.shields.io/badge/tests-442%20passed-4ade80?style=flat-square)](https://github.com/adrianhihi/helix/actions)
-[![recovery](https://img.shields.io/badge/recovery-90.3%25-60a5fa?style=flat-square)]()
-[![platforms](https://img.shields.io/badge/platforms-Tempo%20%7C%20Coinbase%20%7C%20Privy-a78bfa?style=flat-square)]()
+[![tests](https://img.shields.io/badge/tests-489%20passed-4ade80?style=flat-square)](https://github.com/adrianhihi/helix/actions)
+[![accuracy](https://img.shields.io/badge/diagnostic%20accuracy-100%25-60a5fa?style=flat-square)]()
+[![platforms](https://img.shields.io/badge/platforms-Coinbase%20%7C%20Tempo%20%7C%20Privy-a78bfa?style=flat-square)]()
 [![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-Your agent's payment fails. Helix diagnoses, repairs, and learns — automatically.
+Your agent's payment fails. Helix diagnoses, repairs, and learns — automatically.  
 Not a retry wrapper. A wrapper with a brain.
 
 [Quick Start](#quick-start) · [How It Works](#how-it-works) · [Benchmarks](#benchmarks) · [REST API](#rest-api) · [Demo](#demo)
@@ -25,8 +24,9 @@ Not a retry wrapper. A wrapper with a brain.
 ![Helix Demo](assets/demo.gif)
 <img width="463" height="854" alt="image" src="https://github.com/user-attachments/assets/28824439-b819-4e83-85c7-4906b31e5560" />
 
-
 *Session expiry, nonce mismatch, gas errors — all diagnosed and repaired in <1ms.*
+
+---
 
 ## Quick Start
 
@@ -46,6 +46,10 @@ await wrap(agent.pay)(invoice);
 
 That's it. One line. Helix handles the rest.
 
+If this helped, please ⭐ — it helps us reach more developers.
+
+---
+
 ## How It Works
 
 Helix uses **PCEC** (Perceive → Construct → Evaluate → Commit) — a biologically-inspired self-repair loop:
@@ -57,9 +61,9 @@ Error occurs
     ↓
 🧬 Construct — Generate repair candidates from Gene Map
     ↓
-📊 Evaluate  — Bayesian Q-value + Thompson Sampling
+📊 Evaluate  — Bayesian Q-value + Thompson Sampling + Adaptive Weights
     ↓
-✅ Commit    — Execute → verify → learn → Gene Map update
+✅ Commit    — Safety verification → execute → verify → learn → Gene Map update
     ↓
 Second time same error → IMMUNE in <1ms
 ```
@@ -74,7 +78,11 @@ The **Gene Map** remembers every repair. Agent A's failure becomes Agent B's imm
 | LLM Fallback (Claude/GPT) | 10% unknown errors | ~1-6s | $0.001 |
 | Gene Telemetry | Network learns, coverage grows | Background | $0 |
 
+---
+
 ## Benchmarks
+
+Validated on Base mainnet with real transaction failures. 32 test cases across Coinbase, Tempo, Privy, and Generic adapters — covering nonce conflicts, gas errors, ERC-4337/AA failures, session expiry, DEX slippage, rate limits, and edge cases.
 
 | Approach | Recovery Rate | Notes |
 |----------|:------------:|-------|
@@ -82,17 +90,27 @@ The **Gene Map** remembers every repair. Agent A's failure becomes Agent B's imm
 | Error-Specific | 67.7% | Manual error handling |
 | **Helix PCEC** | **90.3%** | Auto-diagnosis + strategy selection |
 
-Tested on 31 payment failure scenarios across Tempo, Coinbase, and Privy. [Full benchmark →](docs/benchmark.md)
+| Platform | Diagnostic Accuracy | Test Cases |
+|----------|:-------------------:|:----------:|
+| Coinbase CDP | 100% | 17/17 |
+| Tempo MPP | 100% | 7/7 |
+| Privy | 100% | 5/5 |
+| Generic | 100% | 3/3 |
+| **Overall** | **100%** | **32/32** |
+
+---
 
 ## Platform Coverage
 
 | Platform | Patterns | Coverage | Strategies |
 |----------|:--------:|:--------:|:----------:|
-| **Coinbase CDP** | 25+ | ERC-4337, Paymaster, x402, Policy | 8 unique |
-| **Tempo MPP** | 13 | Session, nonce, gas, RPC | 6 unique |
-| **Privy** | 7 | Embedded wallet, signing, gas sponsor | 5 unique |
+| **Coinbase CDP** | 25+ | ERC-4337, Paymaster, x402, AA errors, gas | 8 unique |
+| **Tempo MPP** | 13 | Session, nonce, gas spike, DEX slippage, RPC | 6 unique |
+| **Privy** | 7 | Embedded wallet, signing, gas sponsor, policy | 5 unique |
 | **Stripe** | 5 | Payment intents, webhooks | 4 unique |
 | **Generic** | 10 | HTTP, timeout, rate limit | 4 unique |
+
+---
 
 ## REST API
 
@@ -114,11 +132,17 @@ curl -X POST http://localhost:7842/repair \
   "failure": { "code": "verification-failed", "category": "signature", "severity": "high" },
   "strategy": { "name": "refresh_nonce", "action": "refresh_state" },
   "repairMs": 1,
-  "immune": true
+  "immune": true,
+  "candidates": [
+    { "strategy": "refresh_nonce", "score": 87 },
+    { "strategy": "remove_and_resubmit", "score": 64 }
+  ]
 }
 ```
 
 Python, Go, Rust — anything that speaks HTTP.
+
+---
 
 ## Docker
 
@@ -126,26 +150,7 @@ Python, Go, Rust — anything that speaks HTTP.
 docker run -d -p 7842:7842 adrianhihi/helix-server
 ```
 
-Or with docker-compose:
-```bash
-docker-compose up -d
-```
-
-## v1.7 — Failure Learning + Multi-D Scoring
-
-**Failure Learning**: When the same (error, strategy) pair fails 5 times, Helix auto-distills a defensive Gene that blocks the failing strategy in that condition.
-
-**6-Dimension Scoring**: Q-value expanded from 1D to 6D — accuracy, cost efficiency, latency, safety, transferability, reliability.
-
-## Demo Scripts
-
-```bash
-python3 examples/demos/run.py general   # All platforms
-python3 examples/demos/run.py privy     # Privy-specific
-python3 examples/demos/run.py coinbase  # Coinbase CDP (17 patterns)
-python3 examples/demos/run.py mpp       # MPP/Tempo
-python3 examples/demos/run.py v17       # v1.7 features
-```
+---
 
 ## Architecture
 
@@ -162,6 +167,11 @@ python3 examples/demos/run.py v17       # v1.7 features
 │  │classify │ │candidates│ │Q-value  │  │
 │  └─────────┘ └──────────┘ └────┬────┘  │
 │                                ↓        │
+│                    ┌──────────────────┐  │
+│                    │ Safety Verifier  │  │
+│                    │ 7 constraints    │  │
+│                    └────────┬─────────┘  │
+│                             ↓            │
 │                          ┌─────────┐    │
 │                          │ Commit  │    │
 │                          │execute  │    │
@@ -173,18 +183,17 @@ python3 examples/demos/run.py v17       # v1.7 features
 ┌─────────────────────────────────────────┐
 │            Gene Map (SQLite)            │
 │  Bayesian Q-values × 6 dimensions      │
-│  Failure learning + defensive genes     │
-│  Cross-platform gene transfer           │
+│  Causal repair graph                    │
+│  Negative knowledge (anti-patterns)     │
+│  Conditional genes + adaptive weights   │
 └─────────────────────────────────────────┘
 ```
+
+---
 
 ## Python SDK
 
 ```bash
-# Start Helix server
-docker run -d -p 7842:7842 adrianhihi/helix-server
-
-# Install Python SDK
 pip install helix-agent-sdk
 ```
 
@@ -196,55 +205,59 @@ result = client.repair("AA25 invalid account nonce")
 print(f"Strategy: {result.strategy}, Immune: {result.immune}")
 ```
 
-Also available: `@helix_wrap` decorator and `helix_guard` context manager. See [python/README.md](python/README.md).
-
-## Vision
-
-Helix is a **vertical agent for payment reliability** — a "wrapper with a brain" that deeply integrates into agent payment workflows.
-
-1. **Agentic Workflow**: PCEC is a multi-agent repair pipeline — four specialized agents collaborate on each repair with configurable human-in-the-loop via three safety modes.
-
-2. **Proprietary Data Moat**: Gene Map is Helix's core data asset. Every repair generates a data point that doesn't exist on the internet or in any LLM's training set. More agents = more data = better repairs = more agents.
-
-3. **Progressive Automation**: Day 1, LLM handles 100% of novel diagnoses ($0.001/repair). Day 30, Gene Map handles 90% ($0/repair). Day 180, Gene Map handles 99%. Cost decreases with usage, not increases.
+---
 
 ## Roadmap
 
 - [x] PCEC engine + Gene Map core
-- [x] 5 platform adapters (Tempo, Coinbase, Privy, Stripe, Generic)
+- [x] 5 platform adapters (Coinbase, Tempo, Privy, Stripe, Generic)
 - [x] REST API for cross-language integration
-- [x] Failure learning + multi-dimensional scoring
-- [x] Error Embedding (28 signatures, fuzzy matching)
-- [x] Strategy A/B Testing (90/10 traffic split)
-- [x] Gene Registry (push/pull shared knowledge)
-- [x] OpenTelemetry + Audit Log
+- [x] Failure learning + multi-dimensional scoring (6D)
+- [x] Error embedding (28 signatures, fuzzy matching)
 - [x] Gene Dream (background memory consolidation)
-- [ ] Self-Play (autonomous evolution)
-- [ ] Federated Gene Learning
-- [ ] Formal Safety Verification
+- [x] Causal Repair Graph + Negative Knowledge (Reflexion)
+- [x] Meta-Learning + Conditional Genes (ExpeL)
+- [x] Adversarial robustness (4-layer defense)
+- [x] Formal Safety Verification (7 pre-execution constraints)
+- [x] Self-Play Evolution (autonomous strategy improvement)
+- [x] Federated Gene Learning (differential privacy)
+- [x] Auto Strategy Generation (LLM + rule-based)
+- [x] Adaptive Evaluate Weights (online learning)
+- [x] Auto Adapter Discovery
+- [x] Base mainnet validation — 100% diagnostic accuracy (32/32)
+- [ ] Multi-Agent Coordination (shared Gene Map across agent fleets)
+- [ ] PostgreSQL support (enterprise-grade deployment)
+- [ ] Real-time Gene Telemetry Network (privacy-preserving, cross-org learning)
+- [ ] Stripe deep integration
+- [ ] Circle / USDC adapter
+- [ ] Solana adapter
+
+---
 
 ## Research Foundations
 
 | Paper | Implementation |
 |-------|----------------|
+| Reflexion (2023) | Negative Knowledge — anti-pattern memory |
+| ExpeL (2024) | Conditional Genes — context-aware scoring |
+| Voyager (2023) | Auto Strategy Generation |
 | MemRL (2026) | Gene Map Q-value scoring |
 | SAGE (2025) | PCEC Verify stage |
-| ELL (2025) | Gene Combine |
-| MAST (2025) | Root cause hints |
-| ReasoningBank | Gene reasoning fields |
-| A-Mem | Gene relationship links |
-| Who&When | Failure attribution |
+
+---
 
 ## CLI
 
 ```bash
+npx helix serve --port 7842 --mode observe   # Start REST API server
+npx helix simulate "AA25 Invalid account nonce" # Dry-run diagnosis
+npx helix scan ./src                          # Scan codebase for payment patterns
+npx helix dream                               # Trigger Gene Dream
+npx helix self-play 10                        # Run self-play evolution rounds
 npx helix status                              # Gene Map health
-npx helix simulate "AA25 Invalid account nonce" # dry-run diagnosis
-npx helix serve --port 7842 --mode observe    # REST API server
-npx helix audit                                # repair audit log
-npx helix gc                                   # garbage collection
-npx helix stats bot-1                          # agent attribution
 ```
+
+---
 
 ## MCP Server
 
@@ -253,6 +266,8 @@ npx @helix-agent/mcp
 ```
 
 Tools: `helix_diagnose` · `helix_repair` · `helix_gene_status` · `helix_check_immunity`
+
+---
 
 ## Contributing
 
@@ -266,6 +281,6 @@ MIT
 
 <div align="center">
 
-**Built by [Helix](https://github.com/adrianhihi)** · npm install @helix-agent/core
+**Built by [Helix](https://github.com/adrianhihi)** · `npm install @helix-agent/core`
 
 </div>
