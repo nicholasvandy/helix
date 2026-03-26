@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.9.1] - 2026-03-25
+
+### Features
+- **Gene Dream**: 5-stage background memory consolidation (cluster → prune → consolidate → enrich → reindex)
+- **Idle Scheduler**: Auto-triggers dream on inactivity (5min light, 30min full)
+- **Data Versioning**: Schema migration system (v1 → v2 → v3), auto-migrate on startup
+- **Q-value decay**: Old strategies decay 10% on major version jumps
+- **CLI**: `npx helix dream`, `npx helix migrate`
+- **REST**: `POST /dream`, `GET /dream/status`, `GET /schema`
+
+### Fixes
+- vitest setup: auto-cleans API keys so tests pass regardless of env
+- GeneMap auto-migrates on construction
+
+### Stats
+- 343 TypeScript tests, 37 files + 14 Python tests
+- Schema version: 3
+
 ## [1.8.1] - 2026-03-25
 
 ### Docs

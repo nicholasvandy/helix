@@ -134,7 +134,16 @@ curl -X POST http://localhost:7842/repair \
   -d '{"error":"AA25 invalid account nonce","platform":"coinbase"}'
 ```
 
-Endpoints: `POST /repair` · `GET /health` · `GET /genes` · `GET /status` · `GET /schema` · `POST /dream`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /repair | Diagnose + get repair strategy |
+| GET | /health | Server health + schema version |
+| GET | /genes | List all genes |
+| GET | /status | Full server stats |
+| POST | /dream | Trigger Gene Dream cycle |
+| GET | /dream/status | Dream readiness + last stats |
+| GET | /schema | Migration status |
+| POST | /api/telemetry | Report anonymous discoveries |
 
 ## Gene Telemetry
 
@@ -149,6 +158,41 @@ wrap(fn, {
 ```
 
 Opt-in only. No addresses, keys, or amounts sent. Default: disabled.
+
+## Gene Dream
+
+Background memory consolidation — inspired by human REM sleep and Claude Code's Auto Dream.
+
+When your agent is idle, Gene Dream automatically:
+1. **Clusters** similar genes by error similarity
+2. **Prunes** failed strategies (Q < 0.15, 3+ consecutive failures)
+3. **Consolidates** duplicate genes into stronger meta-genes
+4. **Enriches** context (cross-platform coverage)
+5. **Reindexes** for faster lookups
+
+```bash
+npx helix dream                                    # Manual trigger
+curl -X POST http://localhost:7842/dream -d '{"force":true}'  # Via API
+```
+
+Idle Scheduler: auto-triggers after 5min inactivity (light) or 30min (full dream).
+
+## Data Versioning
+
+Gene Map schema evolves across versions. Helix auto-migrates on startup:
+
+```
+v1 → Base schema (genes table + Q-value RL)
+v2 → Gene Dream (gene_meta table + dream state)
+v3 → Gene Telemetry (gene_discoveries table)
+```
+
+```bash
+curl http://localhost:7842/schema     # Check migration status
+npx helix migrate                    # Manual migrate
+```
+
+On major version jumps, old Q-values decay by 10% — strategies that worked on v1 may not be optimal on v3.
 
 ## Key Features
 

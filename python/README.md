@@ -68,7 +68,9 @@ The Python SDK talks to the Helix server which provides:
 - **Cross-platform immunity** — genes learned on Tempo/Privy auto-heal Coinbase errors
 - **LLM fallback** — unknown errors classified by Claude/GPT in real-time ($0.001), then cached forever ($0)
 - **Gene Telemetry** — anonymous network learning, coverage grows over time
-- **321 TypeScript tests + 14 Python tests** — production-grade reliability
+- **Gene Dream** — background memory consolidation, Gene Map gets smarter over time
+- **Data Versioning** — auto-migrates schema on server startup
+- **343+ TypeScript tests + 14 Python tests** — production-grade reliability
 
 Enable LLM on the server:
 ```bash
@@ -90,6 +92,25 @@ docker run -d -p 7842:7842 -e ANTHROPIC_API_KEY adrianhihi/helix-server
 
 All intelligence runs server-side. The Python SDK is a lightweight HTTP client.
 Your agent gets the full power of PCEC, Gene Map, LLM, and network learning.
+
+## Gene Dream + Data Versioning
+
+The Helix server includes background memory consolidation:
+
+```python
+import requests
+
+# Trigger Gene Dream manually
+requests.post("http://localhost:7842/dream", json={"force": True})
+
+# Check dream status
+requests.get("http://localhost:7842/dream/status").json()
+
+# Check schema version
+requests.get("http://localhost:7842/schema").json()
+```
+
+Gene Dream runs automatically when your agent is idle. Data Versioning auto-migrates on server startup.
 
 ## Configuration
 
