@@ -23,6 +23,7 @@ function printHelp() {
     dream      Run Gene Dream consolidation
     migrate    Check and run schema migrations
     self-play  Run autonomous evolution rounds
+    federated  Run federated learning round
     help       Show this help
 
   Examples:
@@ -150,6 +151,20 @@ function agentStats(agentId: string) {
         console.log('');
       }
       engine.getGeneMap().close();
+      break;
+    }
+    case 'federated': {
+      const eps = parseFloat(process.argv[3] || '1.0');
+      const fEng = createEngine({ mode: 'observe', agentId: 'cli', geneMapPath: ':memory:' } as WrapOptions);
+      const { FederatedLearner } = await import('./engine/federated.js');
+      const fl = new FederatedLearner(fEng.getGeneMap().database, eps);
+      console.log(`\n  Federated Gene Learning (epsilon=${eps})\n`);
+      const fr = await fl.federatedRound();
+      console.log(`  Gradients computed: ${fr.gradientsComputed}`);
+      console.log(`  Gradients pushed:   ${fr.gradientsPushed}`);
+      console.log(`  Gradients pulled:   ${fr.gradientsPulled}`);
+      console.log(`  Genes updated:      ${fr.genesUpdated}\n`);
+      fEng.getGeneMap().close();
       break;
     }
     case 'self-play': {

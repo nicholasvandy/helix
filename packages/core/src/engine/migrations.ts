@@ -14,7 +14,7 @@ export interface Migration {
   up: (db: Database.Database) => void;
 }
 
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 export const migrations: Migration[] = [
   {
@@ -80,6 +80,15 @@ export const migrations: Migration[] = [
     description: 'Self-Play Evolution history',
     up: (db) => {
       db.exec(`CREATE TABLE IF NOT EXISTS self_play_history (id INTEGER PRIMARY KEY AUTOINCREMENT, challenge_id TEXT NOT NULL, error_message TEXT NOT NULL, platform TEXT, difficulty TEXT, mutation_type TEXT, strategy_used TEXT, repaired INTEGER DEFAULT 0, verified INTEGER DEFAULT 0, weakness TEXT, played_at INTEGER DEFAULT (unixepoch()))`);
+    },
+  },
+  {
+    version: 8,
+    description: 'Federated Gene Learning — gradient tables',
+    up: (db) => {
+      db.exec(`CREATE TABLE IF NOT EXISTS gradient_log (id INTEGER PRIMARY KEY AUTOINCREMENT, failure_code TEXT NOT NULL, category TEXT NOT NULL, strategy TEXT NOT NULL, q_before REAL NOT NULL, q_after REAL NOT NULL, q_delta REAL NOT NULL, recorded_at INTEGER DEFAULT (unixepoch()))`);
+      db.exec(`CREATE TABLE IF NOT EXISTS global_gradients (id INTEGER PRIMARY KEY AUTOINCREMENT, failure_code TEXT NOT NULL, category TEXT NOT NULL, strategy TEXT NOT NULL, avg_q_delta REAL NOT NULL, total_samples INTEGER DEFAULT 0, agent_count INTEGER DEFAULT 0, received_at INTEGER DEFAULT (unixepoch()), applied INTEGER DEFAULT 0, UNIQUE(failure_code, category, strategy))`);
+      db.exec(`CREATE TABLE IF NOT EXISTS shared_gradients (id INTEGER PRIMARY KEY AUTOINCREMENT, failure_code TEXT NOT NULL, category TEXT NOT NULL, strategy TEXT NOT NULL, q_delta REAL NOT NULL, noise REAL DEFAULT 0, sample_count INTEGER DEFAULT 0, shared_at INTEGER DEFAULT (unixepoch()))`);
     },
   },
 ];

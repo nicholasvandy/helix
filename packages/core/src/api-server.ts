@@ -287,6 +287,28 @@ export function createApiServer(opts: ApiServerOptions = {}) {
       } catch (e) { return json(res, { error: String(e) }, 500); }
     }
 
+    // POST /api/federated/round
+    if (path === '/api/federated/round' && req.method === 'POST') {
+      try {
+        const body = JSON.parse(await readBody(req));
+        const { FederatedLearner } = await import('./engine/federated.js');
+        return json(res, await new FederatedLearner(geneMap.database, body?.epsilon || 1.0).federatedRound());
+      } catch (e) { return json(res, { error: String(e) }, 500); }
+    }
+
+    // GET /api/federated/stats
+    if (path === '/api/federated/stats' && req.method === 'GET') {
+      const { FederatedLearner } = await import('./engine/federated.js');
+      return json(res, new FederatedLearner(geneMap.database).getStats());
+    }
+
+    // GET /api/federated/gradients
+    if (path === '/api/federated/gradients' && req.method === 'GET') {
+      const { FederatedLearner } = await import('./engine/federated.js');
+      const g = new FederatedLearner(geneMap.database).computeGradients();
+      return json(res, { gradients: g, count: g.length });
+    }
+
     // POST /api/self-play
     if (path === '/api/self-play' && req.method === 'POST') {
       try {
