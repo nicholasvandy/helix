@@ -5,7 +5,7 @@
 **Self-healing infrastructure for AI agent payments**
 
 [![npm](https://img.shields.io/npm/v/@helix-agent/core?style=flat-square&color=f0a030)](https://www.npmjs.com/package/@helix-agent/core)
-[![tests](https://img.shields.io/badge/tests-335%20passed-4ade80?style=flat-square)](https://github.com/adrianhihi/helix/actions)
+[![tests](https://img.shields.io/badge/tests-442%20passed-4ade80?style=flat-square)](https://github.com/adrianhihi/helix/actions)
 [![recovery](https://img.shields.io/badge/recovery-90.3%25-60a5fa?style=flat-square)]()
 [![platforms](https://img.shields.io/badge/platforms-Tempo%20%7C%20Coinbase%20%7C%20Privy-a78bfa?style=flat-square)]()
 [![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)

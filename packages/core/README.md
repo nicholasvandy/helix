@@ -5,7 +5,7 @@
 Every payment failure only needs to be solved once. `wrap()` makes any async function self-healing.
 
 [![npm](https://img.shields.io/npm/v/@helix-agent/core)](https://www.npmjs.com/package/@helix-agent/core)
-[![tests](https://img.shields.io/badge/tests-351%20passed-4ade80?style=flat-square)](https://github.com/adrianhihi/helix/actions)
+[![tests](https://img.shields.io/badge/tests-442%20passed-4ade80?style=flat-square)](https://github.com/adrianhihi/helix/actions)
 [![recovery](https://img.shields.io/badge/recovery-90.3%25-60a5fa?style=flat-square)]()
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)]()
 
@@ -86,7 +86,7 @@ wrap(fn, { mode: 'full' })     // All repairs including chain writes.
 | **Privy** | 7 | policy, gas sponsor, cross-chain, signing |
 | **Generic HTTP** | 3 | 429, 500, timeout |
 
-**31+ scenarios. 26 strategies. 4 platforms. 351+ tests.**
+**31+ scenarios. 26 strategies. 4 platforms. 442+ tests. Schema v8.**
 
 ## Python SDK
 
@@ -153,6 +153,16 @@ curl -X POST http://localhost:7842/repair \
 | POST | /dream | Trigger Gene Dream cycle |
 | GET | /dream/status | Dream readiness + last stats |
 | GET | /schema | Migration status |
+| POST | /api/self-play | Run self-play evolution rounds |
+| GET | /api/self-play/stats | Self-play statistics |
+| POST | /api/federated/round | Run federated learning round |
+| GET | /api/federated/stats | Federated learning stats |
+| POST | /api/verify-safety | Pre-check strategy safety |
+| GET | /api/safety-constraints | List 7 safety constraints |
+| GET | /api/causal-graph | Full causal graph |
+| GET | /api/anti-patterns | Negative knowledge |
+| GET | /api/meta-patterns | Learned meta patterns |
+| GET | /api/adversarial-stats | Agent reputation + verification |
 | POST | /api/telemetry | Report anonymous discoveries |
 
 ## Gene Telemetry
@@ -222,6 +232,14 @@ On major version jumps, old Q-values decay by 10% — strategies that worked on 
 - **Multi-Dimensional Scoring** — 6-dimension Q-value (accuracy, cost, latency, safety, transferability, reliability)
 - **Gene Dream** — Background memory consolidation (cluster, prune, consolidate, enrich, reindex)
 - **Data Versioning** — Schema migrations with Q-value decay on major upgrades
+- **Causal Repair Graph** — predicts next errors before they happen
+- **Negative Knowledge** — remembers why repairs failed, avoids repeating mistakes
+- **Meta-Learning** — 3 similar repairs → learns pattern → 4th variant instant
+- **Conditional Genes** — context-aware strategy selection (gas, platform, time)
+- **Adversarial Robustness** — 4-layer defense against Gene poisoning
+- **Formal Safety Verification** — 7 pre-execution safety constraints
+- **Self-Play Evolution** — autonomous challenger/repair/verifier loop
+- **Federated Gene Learning** — privacy-preserving distributed RL with differential privacy
 
 ## API
 
@@ -258,6 +276,8 @@ npx helix stats my-agent                     # Agent attribution
 npx helix dream                              # Gene Dream consolidation
 npx helix migrate                            # Schema migration check
 npx helix scan ./src                         # Scan for payment patterns
+npx helix self-play 10                       # Run 10 self-play rounds
+npx helix federated                          # Federated learning round
 ```
 
 ## Scan Your Codebase

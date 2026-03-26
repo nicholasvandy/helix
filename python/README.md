@@ -70,7 +70,13 @@ The Python SDK talks to the Helix server which provides:
 - **Gene Telemetry** — anonymous network learning, coverage grows over time
 - **Gene Dream** — background memory consolidation, Gene Map gets smarter over time
 - **Data Versioning** — auto-migrates schema on server startup
-- **343+ TypeScript tests + 14 Python tests** — production-grade reliability
+- **Causal Repair Graph** — predicts next errors before they happen
+- **Meta-Learning** — learns repair patterns from 3 examples
+- **Self-Play Evolution** — autonomous testing + weakness discovery
+- **Federated Learning** — privacy-preserving distributed RL
+- **Safety Verification** — 7 pre-execution constraints
+- **Adversarial Robustness** — 4-layer defense against Gene poisoning
+- **442+ TypeScript tests + 14 Python tests** — production-grade reliability
 
 Enable LLM on the server:
 ```bash
