@@ -45,10 +45,10 @@ export function coinbasePerceive(error: Error, _context?: Record<string, unknown
   // ── Gas / Fee Errors ──
 
   if (msg.includes('underpriced') || msg.includes('replacement transaction'))
-    return { code: 'tx-reverted', category: 'gas' as any, severity: 'high', platform, details: msg, timestamp: Date.now() };
+    return { code: 'gas-underpriced' as any, category: 'gas' as any, severity: 'high', platform, details: msg, timestamp: Date.now() };
 
   if (msg.toLowerCase().includes('gas') && (msg.toLowerCase().includes('too low') || msg.toLowerCase().includes('intrinsic gas')))
-    return { code: 'tx-reverted', category: 'gas' as any, severity: 'high', platform, details: msg, timestamp: Date.now() };
+    return { code: 'gas-too-low' as any, category: 'gas' as any, severity: 'high', platform, details: msg, timestamp: Date.now() };
 
   // ── Paymaster / Bundler / ERC-4337 Errors ──
 
