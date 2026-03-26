@@ -14,7 +14,7 @@ export interface Migration {
   up: (db: Database.Database) => void;
 }
 
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 export const migrations: Migration[] = [
   {
@@ -73,6 +73,13 @@ export const migrations: Migration[] = [
       db.exec(`CREATE TABLE IF NOT EXISTS agent_reputation (agent_id TEXT PRIMARY KEY, reputation REAL DEFAULT 0.5, total_reports INTEGER DEFAULT 0, successful_reports INTEGER DEFAULT 0, updated_at INTEGER DEFAULT (unixepoch()))`);
       db.exec(`CREATE TABLE IF NOT EXISTS gene_verifications (id INTEGER PRIMARY KEY AUTOINCREMENT, gene_id INTEGER NOT NULL, agent_id TEXT NOT NULL, success INTEGER NOT NULL, verified_at INTEGER DEFAULT (unixepoch()), UNIQUE(gene_id, agent_id))`);
       db.exec(`CREATE TABLE IF NOT EXISTS gene_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, gene_id INTEGER NOT NULL, q_value REAL NOT NULL, strategy TEXT NOT NULL, params TEXT DEFAULT '{}', snapshot_at INTEGER DEFAULT (unixepoch()))`);
+    },
+  },
+  {
+    version: 7,
+    description: 'Self-Play Evolution history',
+    up: (db) => {
+      db.exec(`CREATE TABLE IF NOT EXISTS self_play_history (id INTEGER PRIMARY KEY AUTOINCREMENT, challenge_id TEXT NOT NULL, error_message TEXT NOT NULL, platform TEXT, difficulty TEXT, mutation_type TEXT, strategy_used TEXT, repaired INTEGER DEFAULT 0, verified INTEGER DEFAULT 0, weakness TEXT, played_at INTEGER DEFAULT (unixepoch()))`);
     },
   },
 ];

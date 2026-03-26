@@ -287,6 +287,28 @@ export function createApiServer(opts: ApiServerOptions = {}) {
       } catch (e) { return json(res, { error: String(e) }, 500); }
     }
 
+    // POST /api/self-play
+    if (path === '/api/self-play' && req.method === 'POST') {
+      try {
+        const body = JSON.parse(await readBody(req));
+        const { SelfPlayEngine } = await import('./engine/self-play.js');
+        const sp = new SelfPlayEngine(geneMap.database);
+        return json(res, await sp.runSession(Math.min(body.rounds || 5, 50)));
+      } catch (e) { return json(res, { error: String(e) }, 500); }
+    }
+
+    // GET /api/self-play/stats
+    if (path === '/api/self-play/stats' && req.method === 'GET') {
+      const { SelfPlayEngine } = await import('./engine/self-play.js');
+      return json(res, new SelfPlayEngine(geneMap.database).getStats());
+    }
+
+    // GET /api/self-play/history
+    if (path === '/api/self-play/history' && req.method === 'GET') {
+      const { SelfPlayEngine } = await import('./engine/self-play.js');
+      return json(res, { history: new SelfPlayEngine(geneMap.database).getHistory() });
+    }
+
     // GET /api/adversarial-stats
     if (path === '/api/adversarial-stats' && req.method === 'GET') {
       const { AdversarialDefense } = await import('./engine/adversarial.js');

@@ -22,6 +22,7 @@ function printHelp() {
     serve      Start REST API server
     dream      Run Gene Dream consolidation
     migrate    Check and run schema migrations
+    self-play  Run autonomous evolution rounds
     help       Show this help
 
   Examples:
@@ -149,6 +150,26 @@ function agentStats(agentId: string) {
         console.log('');
       }
       engine.getGeneMap().close();
+      break;
+    }
+    case 'self-play': {
+      const rounds = parseInt(process.argv[3] || '10');
+      const spEng = createEngine({ mode: 'observe', agentId: 'cli', geneMapPath: ':memory:' } as WrapOptions);
+      const { SelfPlayEngine } = await import('./engine/self-play.js');
+      const sp = new SelfPlayEngine(spEng.getGeneMap().database);
+      console.log(`\n  Self-Play Evolution — ${rounds} rounds\n`);
+      const session = await sp.runSession(rounds);
+      console.log(`  Completed: ${session.completed}/${session.rounds}`);
+      console.log(`  Repaired:  ${session.repaired} (${session.completed > 0 ? Math.round(session.repaired / session.completed * 100) : 0}%)`);
+      console.log(`  Failed:    ${session.failed}`);
+      console.log(`  Duration:  ${session.durationMs}ms`);
+      if (session.weaknesses.length > 0) {
+        console.log(`\n  Weaknesses (${session.weaknesses.length}):`);
+        for (const w of session.weaknesses.slice(0, 5)) console.log(`    • ${w.slice(0, 100)}`);
+        if (session.weaknesses.length > 5) console.log(`    ... and ${session.weaknesses.length - 5} more`);
+      }
+      console.log('');
+      spEng.getGeneMap().close();
       break;
     }
     case 'scan': {
