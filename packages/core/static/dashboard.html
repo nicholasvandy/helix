@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helix — Gene Map Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0c0a07;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--amber:#f59e0b;--orange:#fb923c;--blue:#3b82f6;--green:#10b981;--purple:#8b5cf6;--red:#ef4444;--text:#f5f0e8;--dim:rgba(245,240,232,0.5);--muted:rgba(245,240,232,0.3)}
+body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+.container{max-width:1200px;margin:0 auto}
+.header{text-align:center;margin-bottom:32px}
+.header h1{font-size:24px;font-weight:300}
+.header h1 span{font-weight:700;color:var(--amber)}
+.header .sub{font-size:11px;color:var(--muted);font-family:monospace;margin-top:4px}
+.stats{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-num{font-size:28px;font-weight:700;color:var(--amber)}
+.stat-label{font-size:10px;color:var(--muted);font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+.panel-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-title .dot{width:8px;height:8px;border-radius:50%}
+table{width:100%;font-size:12px;border-collapse:collapse}
+th{text-align:left;padding:8px;font-family:monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--border)}
+td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);color:var(--dim);cursor:pointer}
+tr:hover td{background:rgba(255,255,255,0.02)}
+tr.sel td{background:rgba(245,158,11,0.08)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:monospace}
+.b-g{background:rgba(16,185,129,0.12);color:#6ee7b7}
+.b-a{background:rgba(245,158,11,0.12);color:var(--amber)}
+.b-r{background:rgba(239,68,68,0.12);color:#fca5a5}
+.pd{display:flex;gap:4px}
+.pd span{width:16px;height:16px;border-radius:4px;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:600}
+.radar-box{display:flex;align-items:center;justify-content:center;height:280px}
+.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px}
+.row .k{color:var(--dim)} .row .v{font-family:monospace;font-size:11px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h1>Helix <span>Gene Map Dashboard</span></h1><div class="sub" id="upd">Loading...</div></div>
+  <div class="stats">
+    <div class="stat-card"><div class="stat-num" id="sGenes">-</div><div class="stat-label">Genes</div></div>
+    <div class="stat-card"><div class="stat-num" id="sScore">-</div><div class="stat-label">Avg Score</div></div>
+    <div class="stat-card"><div class="stat-num" id="sSchema">-</div><div class="stat-label">Schema</div></div>
+    <div class="stat-card"><div class="stat-num" id="sDream">-</div><div class="stat-label">Dream</div></div>
+    <div class="stat-card"><div class="stat-num" id="sRepairs">-</div><div class="stat-label">Repairs</div></div>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-title"><div class="dot" style="background:var(--amber)"></div>Gene Radar — <span id="rName" style="color:var(--amber)">select a gene</span></div>
+      <div class="radar-box"><canvas id="rc" width="280" height="280"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><div class="dot" style="background:var(--green)"></div>Strategy Leaderboard</div>
+      <table><thead><tr><th>Strategy</th><th>Code</th><th>Q</th><th>Score</th><th>Platforms</th></tr></thead><tbody id="tb"></tbody></table>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-title"><div class="dot" style="background:var(--blue)"></div>Platform Coverage</div>
+      <div id="pc"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><div class="dot" style="background:var(--purple)"></div>System Status</div>
+      <div id="ss"></div>
+    </div>
+  </div>
+</div>
+<script>
+const A=location.origin;let chart,selId;
+const PC={tempo:{bg:'rgba(245,158,11,0.15)',c:'#f59e0b',l:'T'},privy:{bg:'rgba(59,130,246,0.15)',c:'#93c5fd',l:'P'},coinbase:{bg:'rgba(16,185,129,0.15)',c:'#6ee7b7',l:'C'},generic:{bg:'rgba(255,255,255,0.08)',c:'#999',l:'G'}};
+function bg(s){return s>=.8?'b-g':s>=.5?'b-a':'b-r'}
+function pd(p){return'<div class="pd">'+p.map(x=>{const c=PC[x]||PC.generic;return`<span style="background:${c.bg};color:${c.c}" title="${x}">${c.l}</span>`}).join('')+'</div>'}
+function init(){const ctx=document.getElementById('rc').getContext('2d');chart=new Chart(ctx,{type:'radar',data:{labels:['Accuracy','Cost','Latency','Safety','Transfer','Reliability'],datasets:[{data:[0,0,0,0,0,0],backgroundColor:'rgba(245,158,11,0.15)',borderColor:'rgba(245,158,11,0.8)',borderWidth:2,pointBackgroundColor:'#f59e0b',pointRadius:4}]},options:{responsive:false,scales:{r:{beginAtZero:true,max:1,ticks:{stepSize:.25,color:'rgba(245,240,232,0.3)',backdropColor:'transparent',font:{size:9}},grid:{color:'rgba(255,255,255,0.06)'},angleLines:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'rgba(245,240,232,0.6)',font:{size:10}}}},plugins:{legend:{display:false}}}})}
+function sel(g){selId=g.id;chart.data.datasets[0].data=[g.scores.accuracy,g.scores.cost,g.scores.latency,g.scores.safety,g.scores.transferability,g.scores.reliability];chart.update();document.getElementById('rName').textContent=g.strategy+' ('+g.failureCode+')'}
+async function load(){try{const[sr,hr,dr]=await Promise.all([fetch(A+'/api/gene-scores').then(r=>r.json()),fetch(A+'/health').then(r=>r.json()),fetch(A+'/dream/status').then(r=>r.json()).catch(()=>null)]);
+document.getElementById('sGenes').textContent=sr.total;
+document.getElementById('sScore').textContent=(sr.avgComposite*100).toFixed(0)+'%';
+document.getElementById('sSchema').textContent='v'+(hr.schemaVersion||'?');
+document.getElementById('sRepairs').textContent=hr.totalRepairs||sr.total;
+document.getElementById('sDream').textContent=dr?(dr.ready?'Ready':'Idle'):'N/A';
+document.getElementById('tb').innerHTML=sr.genes.map(g=>`<tr class="${g.id===selId?'sel':''}" onclick='sel(${JSON.stringify(g).replace(/'/g,"&#39;")})'><td style="color:var(--amber);font-family:monospace;font-size:11px">${g.strategy}</td><td style="font-family:monospace;font-size:10px;color:var(--muted)">${g.failureCode}</td><td><span class="badge ${bg(g.qValue)}">${(g.qValue*100).toFixed(0)}</span></td><td><span class="badge ${bg(g.composite)}">${(g.composite*100).toFixed(0)}</span></td><td>${pd(g.platforms)}</td></tr>`).join('');
+const pm={};sr.genes.forEach(g=>g.platforms.forEach(p=>{if(!pm[p])pm[p]={n:0,s:new Set};pm[p].n++;pm[p].s.add(g.strategy)}));
+document.getElementById('pc').innerHTML=Object.entries(pm).sort((a,b)=>b[1].n-a[1].n).map(([n,d])=>{const c=PC[n]||PC.generic;return`<div class="row"><div style="display:flex;gap:8px;align-items:center"><span class="pd"><span style="background:${c.bg};color:${c.c}">${c.l}</span></span>${n}</div><span style="color:var(--muted)">${d.n} genes / ${d.s.size} strategies</span></div>`}).join('');
+document.getElementById('ss').innerHTML=`<div class="row"><span class="k">Server</span><span class="badge b-g">${hr.status}</span></div><div class="row"><span class="k">Schema</span><span class="v">v${hr.schemaVersion||'?'} / v${hr.targetSchemaVersion||'?'}</span></div><div class="row"><span class="k">Uptime</span><span class="v">${Math.floor(hr.uptime||0)}s</span></div><div class="row"><span class="k">Dream</span><span class="v">${dr?(dr.ready?'Ready':dr.reason||'Idle'):'N/A'}</span></div><div class="row" style="border:0"><span class="k">Version</span><span class="v">${hr.version||'?'}</span></div>`;
+if(!selId&&sr.genes.length)sel(sr.genes[0]);
+document.getElementById('upd').textContent='Updated: '+new Date().toLocaleTimeString()+' · Auto-refresh: 10s';
+}catch(e){document.getElementById('upd').textContent='Error: '+e.message}}
+init();load();setInterval(load,10000);
+</script>
+</body>
+</html>

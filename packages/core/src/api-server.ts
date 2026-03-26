@@ -5,6 +5,9 @@
  * Start: npx helix serve [--port 7842] [--mode observe|auto|full]
  */
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PcecEngine } from './engine/pcec.js';
 import { GeneMap } from './engine/gene-map.js';
 import { defaultAdapters } from './platforms/index.js';
@@ -224,6 +227,45 @@ export function createApiServer(opts: ApiServerOptions = {}) {
     if (path === '/dream/status' && req.method === 'GET') {
       const check = dream.shouldDream();
       return json(res, { ...check, lastDream: dream.lastDreamStats() });
+    }
+
+    // GET /dashboard — interactive HTML dashboard
+    if (path === '/dashboard' && req.method === 'GET') {
+      try {
+        const __dir = dirname(fileURLToPath(import.meta.url));
+        const paths = [join(__dir, '../static/dashboard.html'), join(__dir, '../../static/dashboard.html')];
+        let html = '';
+        for (const p of paths) { try { html = readFileSync(p, 'utf-8'); break; } catch { /* next */ } }
+        if (!html) throw new Error('not found');
+        res.writeHead(200, { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' });
+        return res.end(html);
+      } catch {
+        return json(res, { error: 'Dashboard not found' }, 404);
+      }
+    }
+
+    // GET /api/gene-scores — all genes with 6D scores
+    if (path === '/api/gene-scores' && req.method === 'GET') {
+      const db = geneMap.database;
+      const genes = db.prepare('SELECT * FROM genes ORDER BY q_value DESC').all() as any[];
+      const scored = genes.map((g: any) => {
+        const sc = g.success_count ?? 0;
+        const fc = g.consecutive_failures ?? 0;
+        const platforms: string[] = (() => { try { return JSON.parse(g.platforms || '[]'); } catch { return []; } })();
+        const ms = g.avg_repair_ms ?? 0;
+        const scores = {
+          accuracy: Math.min(1, sc / Math.max(1, sc + fc) * 1.1),
+          cost: ms < 10 ? 0.95 : ms < 100 ? 0.7 : 0.4,
+          latency: ms < 5 ? 1.0 : ms < 50 ? 0.8 : ms < 500 ? 0.5 : 0.2,
+          safety: fc === 0 ? 1.0 : fc < 3 ? 0.7 : 0.3,
+          transferability: Math.min(1, platforms.length / 4),
+          reliability: Math.min(1, sc / 10),
+        };
+        const composite = Math.round((scores.accuracy * 0.25 + scores.cost * 0.15 + scores.latency * 0.15 + scores.safety * 0.25 + scores.transferability * 0.1 + scores.reliability * 0.1) * 100) / 100;
+        return { id: g.id, failureCode: g.failure_code, category: g.category, strategy: g.strategy, qValue: g.q_value, successCount: sc, consecutiveFailures: fc, avgRepairMs: ms, platforms, scores, composite };
+      });
+      const avg = scored.length > 0 ? Math.round(scored.reduce((s: number, g: any) => s + g.composite, 0) / scored.length * 100) / 100 : 0;
+      return json(res, { total: scored.length, avgComposite: avg, genes: scored });
     }
 
     // ── Gene Collector Endpoints ──
