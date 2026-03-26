@@ -36,7 +36,7 @@ function getDefaultEngine(options?: WrapOptions): { engine: PcecEngine; geneMap:
   return { engine, geneMap };
 }
 
-const SIMPLE_RETRY = ['backoff_retry', 'retry', 'retry_with_receipt', 'renew_session'];
+const SIMPLE_RETRY = ['backoff_retry', 'retry', 'retry_with_receipt'];
 
 export function wrap<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>,
@@ -140,6 +140,64 @@ export function wrap<TArgs extends unknown[], TResult>(
           }
 
           log.info(result.immune ? `IMMUNE via ${strategy}` : `REPAIRED via ${strategy}`, { ms: result.totalMs, immune: result.immune });
+
+          // ── renew_session: call sessionRefresher ──
+          if (strategy === 'renew_session' && options?.sessionRefresher) {
+            try {
+              const refreshed = await options.sessionRefresher();
+              const newTokens = typeof refreshed === 'string' ? { authorization: `Bearer ${refreshed}` } : refreshed;
+              const sig = detectSignature(currentArgs as unknown[]);
+              if (sig.type === 'fetch' && currentArgs.length >= 2) {
+                const init = { ...(currentArgs[1] as Record<string, unknown> || {}) };
+                init.headers = { ...(init.headers as Record<string, unknown> || {}), ...newTokens };
+                currentArgs = [currentArgs[0], init] as TArgs;
+              } else if (sig.type !== 'unknown' && typeof currentArgs[0] === 'object') {
+                currentArgs = [{ ...(currentArgs[0] as Record<string, unknown>), ...newTokens }, ...currentArgs.slice(1)] as TArgs;
+              }
+              log.info('Session refreshed via sessionRefresher');
+            } catch { log.warn('sessionRefresher failed, retrying with original args'); }
+            continue;
+          }
+
+          // ── split_transaction: split value/amount into N parts ──
+          if (strategy === 'split_transaction') {
+            const parts = options?.splitConfig?.parts ?? 2;
+            const delayMs = options?.splitConfig?.delayMs ?? 1000;
+            const sig = detectSignature(currentArgs as unknown[]);
+
+            if (sig.type === 'viem-tx') {
+              const tx = currentArgs[0] as Record<string, unknown>;
+              const val = tx.value as bigint | undefined;
+              if (val && val > 0n) {
+                const partVal = val / BigInt(parts);
+                log.info(`Splitting tx into ${parts} parts of ${partVal}`);
+                let lastResult: TResult | undefined;
+                for (let i = 0; i < parts; i++) {
+                  try {
+                    lastResult = await fn(...([{ ...tx, value: partVal }, ...currentArgs.slice(1)] as TArgs));
+                    if (i < parts - 1) await new Promise(r => setTimeout(r, delayMs));
+                  } catch { log.warn(`Split part ${i + 1}/${parts} failed`); }
+                }
+                if (lastResult !== undefined) return lastResult;
+              }
+            } else if (sig.type === 'generic-payment') {
+              const p = currentArgs[0] as Record<string, unknown>;
+              const amt = p.amount as number | undefined;
+              if (amt && amt > 0) {
+                const partAmt = amt / parts;
+                log.info(`Splitting payment into ${parts} parts of ${partAmt}`);
+                let lastResult: TResult | undefined;
+                for (let i = 0; i < parts; i++) {
+                  try {
+                    lastResult = await fn(...([{ ...p, amount: partAmt }, ...currentArgs.slice(1)] as TArgs));
+                    if (i < parts - 1) await new Promise(r => setTimeout(r, delayMs));
+                  } catch { log.warn(`Split part ${i + 1}/${parts} failed`); }
+                }
+                if (lastResult !== undefined) return lastResult;
+              }
+            }
+            continue; // fallback: retry as-is
+          }
 
           // Apply overrides for non-simple strategies
           if (!SIMPLE_RETRY.includes(strategy)) {

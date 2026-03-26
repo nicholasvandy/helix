@@ -30,7 +30,7 @@ export function detectSignature(args: unknown[]): DetectedSignature {
 export function applyOverrides(args: unknown[], overrides: Record<string, unknown>, strategy: string, sig: DetectedSignature): unknown[] | null {
   if (sig.type === 'unknown') return null;
   // Allow strategies that modify params even without explicit overrides
-  const alwaysApply = ['reduce_request', 'speed_up_transaction', 'refresh_nonce'];
+  const alwaysApply = ['reduce_request', 'speed_up_transaction', 'refresh_nonce', 'remove_and_resubmit'];
   if (Object.keys(overrides).length === 0 && !alwaysApply.includes(strategy)) return null;
   const newArgs = [...args];
 
@@ -52,6 +52,16 @@ export function applyOverrides(args: unknown[], overrides: Record<string, unknow
         break;
       case 'switch_network':
         if (overrides.chainId !== undefined) tx.chainId = overrides.chainId;
+        break;
+      case 'remove_and_resubmit':
+        delete tx.nonce;
+        if (tx.gasPrice) tx.gasPrice = (BigInt(tx.gasPrice as bigint) * 130n) / 100n;
+        if (tx.maxFeePerGas) tx.maxFeePerGas = (BigInt(tx.maxFeePerGas as bigint) * 130n) / 100n;
+        if (tx.maxPriorityFeePerGas) tx.maxPriorityFeePerGas = (BigInt(tx.maxPriorityFeePerGas as bigint) * 150n) / 100n;
+        break;
+      case 'renew_session':
+        if (overrides.authorization) tx.authorization = overrides.authorization;
+        if (overrides.sessionToken) tx.sessionToken = overrides.sessionToken;
         break;
       case 'fix_params':
         Object.assign(tx, overrides);

@@ -268,6 +268,10 @@ export interface WrapOptions {
   otel?: { tracer?: any; meter?: any; serviceName?: string };
   /** Gene Registry configuration for shared learning across instances. */
   registry?: { url?: string; apiKey?: string; agentId?: string; minQualityForPush?: number; minQualityForPull?: number; syncIntervalMs?: number; pushBatchSize?: number; pullBatchSize?: number };
+  /** Callback to refresh session/auth token when renew_session strategy fires. */
+  sessionRefresher?: () => Promise<Record<string, unknown> | string>;
+  /** Config for split_transaction strategy. */
+  splitConfig?: { parts?: number; delayMs?: number; minAmount?: number };
 }
 
 // ── Revenue estimates per category ──────────────────────────────
