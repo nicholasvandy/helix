@@ -95,6 +95,10 @@ export function wrap<TArgs extends unknown[], TResult>(
               throw verifyErr;
             }
           }
+          // For primitive results (string tx hashes), don't use Object.assign which creates a String object
+          if (typeof result === 'string' || typeof result === 'number' || typeof result === 'bigint') {
+            return result;
+          }
           return Object.assign(result as object, { _helix: { repaired: true, attempts: attempt + 1, totalMs: Date.now() - startTime } }) as TResult;
         }
         return result;
