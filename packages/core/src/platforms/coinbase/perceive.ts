@@ -64,7 +64,11 @@ export function coinbasePerceive(error: Error, _context?: Record<string, unknown
   if (msg.includes('AA25') || msg.includes('Invalid account nonce'))
     return { code: 'verification-failed', category: 'signature', severity: 'high', platform, details: msg, timestamp: Date.now() };
 
-  if (msg.includes('EXECUTION_REVERTED') || msg.includes('-32521') || msg.includes('execution reverted'))
+  // ERC20 balance exceeded (must be before generic revert check)
+  if (msg.toLowerCase().includes('exceeds balance') || (msg.includes('ERC20') && msg.includes('transfer amount')))
+    return { code: 'payment-insufficient', category: 'balance', severity: 'high', platform, details: msg, timestamp: Date.now() };
+
+  if (msg.includes('EXECUTION_REVERTED') || msg.includes('-32521') || msg.toLowerCase().includes('execution reverted'))
     return { code: 'tx-reverted', category: 'batch', severity: 'high', platform, details: msg, timestamp: Date.now() };
 
   if (msg.includes('AA21') || msg.includes("didn't pay prefund"))

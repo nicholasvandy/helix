@@ -48,6 +48,12 @@ export function coinbaseConstruct(failure: FailureClassification): RepairCandida
     ];
   }
 
+  if (failure.platform === 'coinbase' && failure.category === 'batch') {
+    return [
+      { id: 'cb_remove_resubmit', strategy: 'remove_and_resubmit', description: 'Remove failed tx and resubmit', estimatedCostUsd: 0.01, estimatedSpeedMs: 300, requirements: [], score: 0, successProbability: 0.85, platform: 'coinbase' },
+    ];
+  }
+
   if (failure.platform === 'coinbase' && failure.category === 'network') {
     return [
       { id: 'cb_switch_net', strategy: 'switch_network', description: 'Switch to correct network for x402 payment', estimatedCostUsd: 0, estimatedSpeedMs: 200, requirements: ['rpcUrl'], score: 0, successProbability: 0.92, platform: 'coinbase' },
