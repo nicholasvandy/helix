@@ -1,4 +1,5 @@
 import { bus } from './bus.js';
+import { refine, filterCandidates, createRefinementContext, recordAttempt } from './self-refine.js';
 import { GeneMap } from './gene-map.js';
 import { evaluate } from './evaluate.js';
 import { HelixProvider } from './provider.js';
@@ -225,6 +226,7 @@ export class PcecEngine {
   async repair(error: Error, context?: Record<string, unknown>): Promise<RepairResult> {
     const start = Date.now();
     const mode: HelixMode = this.options.mode ?? 'auto';
+    const refineCtx = createRefinementContext(error.message, this.options.maxRetries ?? 3);
 
     // Safety: prevent infinite cycles
     this.cycleCount++;
@@ -481,6 +483,10 @@ export class PcecEngine {
       candidates: candidates.map(c => ({ id: c.id, strategy: c.strategy, platform: c.platform })),
     });
 
+    // ── Self-Refine: filter out previously failed strategies ──
+    const refinement = refine(refineCtx);
+    candidates = filterCandidates(candidates, refinement.excludeStrategies);
+
     // ── EVALUATE ──
     const scored = evaluate(candidates, failure);
     // Apply anti-pattern penalties from Negative Knowledge
@@ -589,6 +595,7 @@ export class PcecEngine {
       this.stats.repairs++;
       this.stats.savedRevenue += revenue;
       this.cycleCount = 0;
+      recordAttempt(refineCtx, winner.strategy, false, undefined, totalMs);
 
       const txHash = commitResult.overrides.txHash as string | undefined;
       this.geneMap.logRepairComplete(repairId, txHash);
@@ -698,6 +705,7 @@ export class PcecEngine {
     }
 
     // Verify failed
+    recordAttempt(refineCtx, winner.strategy, true, commitResult.description, Date.now() - start);
     this.geneMap.logRepairFailed(repairId);
     this.geneMap.updateContext(failure.code, failure.category, false, { chain: (context?.chainId as number)?.toString(), platform: failure.platform });
     this.geneMap.recordFailureAnalysis(failure.code, failure.category, `Strategy '${winner.strategy}' failed: ${commitResult.description}`);

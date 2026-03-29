@@ -7,7 +7,7 @@
  * Works by feeding failure information back into existing scoring systems
  * (NegativeKnowledge, AdaptiveWeights, Q-values).
  *
- * The framework doesn't know what "nonce" or "gas" is.
+ * The framework is domain-agnostic and has no knowledge of specific error types.
  * It only knows: "strategy X was tried and failed with reason Y."
  */
 
