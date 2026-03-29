@@ -4,6 +4,7 @@
   "workspaces": [
     "packages/vial-core",
     "packages/core",
+    "packages/adapter-api",
     "packages/mcp",
     "packages/api",
     "dashboard"

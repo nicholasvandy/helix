@@ -1,0 +1,26 @@
+{
+  "name": "@vial-agent/adapter-api",
+  "version": "0.1.0",
+  "description": "Generic HTTP/API self-healing adapter for Vial",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "self-healing",
+    "api",
+    "http",
+    "retry",
+    "error-recovery",
+    "vial"
+  ],
+  "author": "Adrian Bai",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
