@@ -47,8 +47,8 @@ describe('MPPScan Discovery', () => {
     const { body } = await req('/openapi.json');
     const heal = body.paths['/heal'].post;
     expect(heal['x-payment-info']).toBeTruthy();
-    expect(heal['x-payment-info'].pricingMode).toBe('fixed');
     expect(heal['x-payment-info'].protocols).toContain('mpp');
+    expect(heal['x-payment-info'].mpp.pricingMode).toBe('fixed');
     expect(heal.responses['402']).toBeTruthy();
     expect(heal.requestBody).toBeTruthy();
   });
