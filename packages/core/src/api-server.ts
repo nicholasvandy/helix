@@ -95,9 +95,16 @@ export function createApiServer(opts: ApiServerOptions = {}) {
 
     // ── MPPScan / AgentCash Discovery ──────────────────────
 
+    // GET /favicon.ico — minimal 1x1 transparent PNG
+    if (path === '/favicon.ico') {
+      const ico = Buffer.from('AAABAAEAAQEAAAEAGAAwAAAAFgAAACgAAAABAAAAAgAAAAEAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAA=', 'base64');
+      res.writeHead(200, { 'Content-Type': 'image/x-icon', 'Content-Length': String(ico.length), 'Cache-Control': 'public, max-age=86400' });
+      return res.end(ico);
+    }
+
     // GET /.well-known/x402 — MPP discovery
     if (path === '/.well-known/x402' && req.method === 'GET') {
-      return json(res, { specUrl: '/openapi.json', version: '0.1' });
+      return json(res, { version: '1.0', 'openapi-url': '/openapi.json', endpoints: ['/heal', '/observe'] });
     }
 
     // GET /openapi.json — OpenAPI 3.1.0 spec for MPPScan discovery
@@ -111,13 +118,20 @@ export function createApiServer(opts: ApiServerOptions = {}) {
           'x-guidance': 'Use POST /heal to repair a failed payment transaction. Send the failed transaction and error message, get back a repaired transaction ready to retry. Use GET /gene-map to inspect learned repair patterns.',
         },
         'x-discovery': { ownershipProofs: [] },
+        components: {
+          securitySchemes: {
+            mppPayment: { type: 'http', scheme: 'bearer', description: 'MPP payment token' },
+          },
+        },
+        security: [{ mppPayment: [] }],
         paths: {
           '/heal': {
             post: {
               operationId: 'healTransaction',
               summary: 'Heal - Repair a failed agent payment transaction',
               tags: ['Healing'],
-              'x-payment-info': { pricingMode: 'fixed', price: '0.010000', protocols: ['mpp'] },
+              security: [{ mppPayment: [] }],
+              'x-payment-info': { pricingMode: 'fixed', price: '0.010000', protocols: ['mpp'], mpp: { pricingMode: 'fixed', price: '0.010000' } },
               requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { transaction: { type: 'object', properties: { to: { type: 'string' }, value: { type: 'string' }, data: { type: 'string' }, chainId: { type: 'number' } }, required: ['to', 'value', 'chainId'] }, error: { type: 'string' }, context: { type: 'object' } }, required: ['transaction', 'error'] } } } },
               responses: { '200': { description: 'Repaired transaction', content: { 'application/json': { schema: { type: 'object', properties: { repaired: { type: 'object' }, diagnosis: { type: 'string' }, strategy: { type: 'string' }, confidence: { type: 'number' } }, required: ['repaired', 'diagnosis', 'strategy', 'confidence'] } } } }, '402': { description: 'Payment Required' } },
             },
@@ -127,7 +141,8 @@ export function createApiServer(opts: ApiServerOptions = {}) {
               operationId: 'observeTransaction',
               summary: 'Observe - Monitor a transaction without healing',
               tags: ['Observability'],
-              'x-payment-info': { pricingMode: 'fixed', price: '0.001000', protocols: ['mpp'] },
+              security: [{ mppPayment: [] }],
+              'x-payment-info': { pricingMode: 'fixed', price: '0.001000', protocols: ['mpp'], mpp: { pricingMode: 'fixed', price: '0.001000' } },
               requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { transaction: { type: 'object' }, chainId: { type: 'number' } }, required: ['transaction', 'chainId'] } } } },
               responses: { '200': { description: 'Observation result', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string' }, prediction: { type: 'string' }, riskFactors: { type: 'array', items: { type: 'string' } } }, required: ['status', 'prediction', 'riskFactors'] } } } }, '402': { description: 'Payment Required' } },
             },
@@ -138,6 +153,7 @@ export function createApiServer(opts: ApiServerOptions = {}) {
               summary: 'Gene Map - View learned repair patterns',
               tags: ['Intelligence'],
               security: [],
+              'x-auth-mode': 'none',
               responses: { '200': { description: 'Gene Map state', content: { 'application/json': { schema: { type: 'object', properties: { totalGenes: { type: 'number' }, topPatterns: { type: 'array', items: { type: 'object' } }, successRate: { type: 'number' } }, required: ['totalGenes', 'topPatterns', 'successRate'] } } } } },
             },
           },
