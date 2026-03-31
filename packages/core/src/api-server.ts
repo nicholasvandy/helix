@@ -93,6 +93,124 @@ export function createApiServer(opts: ApiServerOptions = {}) {
     const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
     const path = url.pathname;
 
+    // ── MPPScan / AgentCash Discovery ──────────────────────
+
+    // GET /.well-known/x402 — MPP discovery
+    if (path === '/.well-known/x402' && req.method === 'GET') {
+      return json(res, { specUrl: '/openapi.json', version: '0.1' });
+    }
+
+    // GET /openapi.json — OpenAPI 3.1.0 spec for MPPScan discovery
+    if (path === '/openapi.json' && req.method === 'GET') {
+      return json(res, {
+        openapi: '3.1.0',
+        info: {
+          title: 'Helix — Self-Healing Agent Payment SDK',
+          version: '2.6.0',
+          description: 'Helix automatically repairs failed AI agent payment transactions. PCEC engine with Gene Map reinforcement learning.',
+          'x-guidance': 'Use POST /heal to repair a failed payment transaction. Send the failed transaction and error message, get back a repaired transaction ready to retry. Use GET /gene-map to inspect learned repair patterns.',
+        },
+        'x-discovery': { ownershipProofs: [] },
+        paths: {
+          '/heal': {
+            post: {
+              operationId: 'healTransaction',
+              summary: 'Heal - Repair a failed agent payment transaction',
+              tags: ['Healing'],
+              'x-payment-info': { pricingMode: 'fixed', price: '0.010000', protocols: ['mpp'] },
+              requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { transaction: { type: 'object', properties: { to: { type: 'string' }, value: { type: 'string' }, data: { type: 'string' }, chainId: { type: 'number' } }, required: ['to', 'value', 'chainId'] }, error: { type: 'string' }, context: { type: 'object' } }, required: ['transaction', 'error'] } } } },
+              responses: { '200': { description: 'Repaired transaction', content: { 'application/json': { schema: { type: 'object', properties: { repaired: { type: 'object' }, diagnosis: { type: 'string' }, strategy: { type: 'string' }, confidence: { type: 'number' } }, required: ['repaired', 'diagnosis', 'strategy', 'confidence'] } } } }, '402': { description: 'Payment Required' } },
+            },
+          },
+          '/observe': {
+            post: {
+              operationId: 'observeTransaction',
+              summary: 'Observe - Monitor a transaction without healing',
+              tags: ['Observability'],
+              'x-payment-info': { pricingMode: 'fixed', price: '0.001000', protocols: ['mpp'] },
+              requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { transaction: { type: 'object' }, chainId: { type: 'number' } }, required: ['transaction', 'chainId'] } } } },
+              responses: { '200': { description: 'Observation result', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string' }, prediction: { type: 'string' }, riskFactors: { type: 'array', items: { type: 'string' } } }, required: ['status', 'prediction', 'riskFactors'] } } } }, '402': { description: 'Payment Required' } },
+            },
+          },
+          '/gene-map': {
+            get: {
+              operationId: 'getGeneMap',
+              summary: 'Gene Map - View learned repair patterns',
+              tags: ['Intelligence'],
+              security: [],
+              responses: { '200': { description: 'Gene Map state', content: { 'application/json': { schema: { type: 'object', properties: { totalGenes: { type: 'number' }, topPatterns: { type: 'array', items: { type: 'object' } }, successRate: { type: 'number' } }, required: ['totalGenes', 'topPatterns', 'successRate'] } } } } },
+            },
+          },
+        },
+      });
+    }
+
+    // POST /heal — Repair a failed payment transaction (MPP payable)
+    if (path === '/heal' && req.method === 'POST') {
+      // MPP payment check
+      const paymentHeader = req.headers['x-payment'] || req.headers['authorization'];
+      if (!paymentHeader) {
+        res.writeHead(402, {
+          'Content-Type': 'application/json',
+          'WWW-Authenticate': 'MPP realm="Helix Healing Service", resource-id="helix-heal-v1"',
+          'Access-Control-Allow-Origin': '*',
+        });
+        return res.end(JSON.stringify({ error: 'Payment Required', message: 'Send MPP payment header to use this endpoint' }));
+      }
+      try {
+        const body = JSON.parse(await readBody(req));
+        const { transaction, error: errorMsg, context: ctx } = body;
+        if (!transaction || !errorMsg) return json(res, { error: 'transaction and error fields required' }, 400);
+        const err = new Error(errorMsg);
+        const result = await engine.repair(err, { ...ctx, platform: ctx?.platform || 'coinbase' });
+        const strategy = result.winner?.strategy ?? result.gene?.strategy ?? 'unknown';
+        return json(res, {
+          repaired: { ...transaction, ...(result.commitOverrides ?? {}) },
+          diagnosis: result.failure?.code ?? 'unknown',
+          strategy,
+          confidence: result.winner?.successProbability ?? 0.5,
+        });
+      } catch (e: any) {
+        return json(res, { error: e.message }, 500);
+      }
+    }
+
+    // POST /observe — Monitor a transaction (MPP payable)
+    if (path === '/observe' && req.method === 'POST') {
+      const paymentHeader = req.headers['x-payment'] || req.headers['authorization'];
+      if (!paymentHeader) {
+        res.writeHead(402, {
+          'Content-Type': 'application/json',
+          'WWW-Authenticate': 'MPP realm="Helix Healing Service", resource-id="helix-observe-v1"',
+          'Access-Control-Allow-Origin': '*',
+        });
+        return res.end(JSON.stringify({ error: 'Payment Required', message: 'Send MPP payment header to use this endpoint' }));
+      }
+      try {
+        const body = JSON.parse(await readBody(req));
+        const { transaction, chainId } = body;
+        if (!transaction) return json(res, { error: 'transaction field required' }, 400);
+        // Analyze transaction risk without executing repair
+        const riskFactors: string[] = [];
+        if (!transaction.to) riskFactors.push('missing recipient');
+        if (!transaction.value && !transaction.data) riskFactors.push('no value or data');
+        if (transaction.gas && BigInt(transaction.gas) < 21000n) riskFactors.push('gas too low');
+        return json(res, { status: 'analyzed', prediction: riskFactors.length > 0 ? 'at-risk' : 'likely-success', riskFactors });
+      } catch (e: any) {
+        return json(res, { error: e.message }, 500);
+      }
+    }
+
+    // GET /gene-map — View learned repair patterns (public)
+    if (path === '/gene-map' && req.method === 'GET') {
+      const genes = geneMap.list();
+      const totalGenes = genes.length;
+      const topPatterns = genes.slice(0, 10).map(g => ({ code: g.failureCode, category: g.category, strategy: g.strategy, qValue: g.qValue, successCount: g.successCount }));
+      const totalSuccess = genes.reduce((s, g) => s + (g.successCount || 0), 0);
+      const totalAttempts = totalSuccess + genes.reduce((s, g) => s + (g.consecutiveFailures || 0), 0);
+      return json(res, { totalGenes, topPatterns, successRate: totalAttempts > 0 ? Math.round(totalSuccess / totalAttempts * 100) / 100 : 1 });
+    }
+
     // GET / — welcome
     if (path === '/' && req.method === 'GET') {
       const health = geneMap.health();
