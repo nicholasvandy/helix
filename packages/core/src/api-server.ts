@@ -159,6 +159,7 @@ export function createApiServer(opts: ApiServerOptions = {}) {
               summary: 'Gene Map - View learned repair patterns',
               tags: ['Intelligence'],
               security: [],
+              'x-payment-info': { authMode: 'none' },
               responses: { '200': { description: 'Gene Map state', content: { 'application/json': { schema: { type: 'object', properties: { totalGenes: { type: 'number' }, topPatterns: { type: 'array', items: { type: 'object' } }, successRate: { type: 'number' } }, required: ['totalGenes', 'topPatterns', 'successRate'] } } } } },
             },
           },
@@ -171,12 +172,13 @@ export function createApiServer(opts: ApiServerOptions = {}) {
       // MPP payment check
       const paymentHeader = req.headers['x-payment'] || req.headers['authorization'];
       if (!paymentHeader) {
+        const realm = `https://${req.headers.host || 'helix-production-e110.up.railway.app'}`;
         res.writeHead(402, {
           'Content-Type': 'application/json',
-          'WWW-Authenticate': 'MPP realm="Helix Healing Service", resource-id="helix-heal-v1"',
+          'WWW-Authenticate': `Payment method="tempo" intent="charge" realm="${realm}" request='{"amount":"0.010000","asset":"USDC","network":"base"}'`,
           'Access-Control-Allow-Origin': '*',
         });
-        return res.end(JSON.stringify({ error: 'Payment Required', message: 'Send MPP payment header to use this endpoint' }));
+        return res.end(JSON.stringify({ error: 'Payment Required', paymentOptions: [{ method: 'tempo', network: 'base', asset: 'USDC', amount: '0.010000', realm }] }));
       }
       try {
         const body = JSON.parse(await readBody(req));
@@ -200,12 +202,13 @@ export function createApiServer(opts: ApiServerOptions = {}) {
     if (path === '/observe' && req.method === 'POST') {
       const paymentHeader = req.headers['x-payment'] || req.headers['authorization'];
       if (!paymentHeader) {
+        const realm = `https://${req.headers.host || 'helix-production-e110.up.railway.app'}`;
         res.writeHead(402, {
           'Content-Type': 'application/json',
-          'WWW-Authenticate': 'MPP realm="Helix Healing Service", resource-id="helix-observe-v1"',
+          'WWW-Authenticate': `Payment method="tempo" intent="charge" realm="${realm}" request='{"amount":"0.001000","asset":"USDC","network":"base"}'`,
           'Access-Control-Allow-Origin': '*',
         });
-        return res.end(JSON.stringify({ error: 'Payment Required', message: 'Send MPP payment header to use this endpoint' }));
+        return res.end(JSON.stringify({ error: 'Payment Required', paymentOptions: [{ method: 'tempo', network: 'base', asset: 'USDC', amount: '0.001000', realm }] }));
       }
       try {
         const body = JSON.parse(await readBody(req));

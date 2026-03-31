@@ -70,15 +70,16 @@ describe('MPPScan Discovery', () => {
   test('POST /heal without payment → 402 + WWW-Authenticate', async () => {
     const { status, headers } = await req('/heal', 'POST', JSON.stringify({ transaction: { to: '0x1', value: '1', chainId: 8453 }, error: 'test' }));
     expect(status).toBe(402);
-    expect(headers['www-authenticate']).toContain('MPP');
+    expect(headers['www-authenticate']).toContain('Payment');
+    expect(headers['www-authenticate']).toContain('method="tempo"');
     expect(headers['www-authenticate']).toContain('realm=');
-    expect(headers['www-authenticate']).toContain('resource-id=');
   });
 
   test('POST /observe without payment → 402 + WWW-Authenticate', async () => {
     const { status, headers } = await req('/observe', 'POST', JSON.stringify({ transaction: {}, chainId: 8453 }));
     expect(status).toBe(402);
-    expect(headers['www-authenticate']).toContain('MPP');
+    expect(headers['www-authenticate']).toContain('Payment');
+    expect(headers['www-authenticate']).toContain('method="tempo"');
   });
 
   test('POST /heal with payment header → 200', async () => {
