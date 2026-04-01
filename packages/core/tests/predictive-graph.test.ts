@@ -83,14 +83,14 @@ describe('Predictive Failure Graph', () => {
   });
 
   it('preload loads Gene into cache without side effects', () => {
-    // verification-failed/signature exists as a seed gene
+    // nonce-mismatch/nonce exists as a seed gene
     (gm as any).cache.clear();
 
-    gm.preload('verification-failed' as any, 'signature' as any);
-    expect((gm as any).cache.has('verification-failed:signature')).toBe(true);
+    gm.preload('nonce-mismatch' as any, 'nonce' as any);
+    expect((gm as any).cache.has('nonce-mismatch:nonce')).toBe(true);
 
     // Preload again — should be a no-op
-    gm.preload('verification-failed' as any, 'signature' as any);
+    gm.preload('nonce-mismatch' as any, 'nonce' as any);
   });
 
   it('preload does not crash for non-existent gene', () => {
@@ -131,7 +131,7 @@ describe('PCEC transition tracking', () => {
     await engine.repair(new Error('HTTP 429 rate limited'));
 
     // A link should exist from nonce error to rate-limit error
-    const links = gm.getLinks('verification-failed', 'signature');
+    const links = gm.getLinks('nonce-mismatch', 'nonce');
     expect(links.length).toBeGreaterThanOrEqual(1);
 
     gm.close();
@@ -147,7 +147,7 @@ describe('PCEC transition tracking', () => {
 
     // Build up enough transitions for predictions
     for (let i = 0; i < 4; i++) {
-      gm.recordTransition('verification-failed', 'signature', 'rate-limited', 'auth', 1000);
+      gm.recordTransition('nonce-mismatch', 'nonce', 'rate-limited', 'auth', 1000);
     }
 
     const result = await engine.repair(new Error('nonce mismatch'));

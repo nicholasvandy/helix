@@ -40,7 +40,7 @@ export function simulate(options: SimulateOptions): SimulateResult {
   // Since we can't call perceive synchronously, we do a best-effort gene check.
   const msg = error.message.toLowerCase();
   const patterns: [string, string, string][] = [
-    ['nonce', 'verification-failed', 'signature'],
+    ['nonce', 'nonce-mismatch', 'nonce'],
     ['insufficient', 'payment-insufficient', 'balance'],
     ['rate', 'rate-limited', 'auth'],
     ['429', 'rate-limited', 'auth'],
@@ -52,7 +52,7 @@ export function simulate(options: SimulateOptions): SimulateResult {
     ['malformed', 'malformed-credential', 'service'],
     ['slippage', 'swap-reverted', 'dex'],
     ['reverted', 'tx-reverted', 'batch'],
-    ['AA25', 'verification-failed', 'signature'],
+    ['AA25', 'nonce-mismatch', 'nonce'],
   ];
 
   for (const [pattern, code, category] of patterns) {

@@ -51,7 +51,8 @@ describe('Coinbase perceive', () => {
   it('classifies AA25 nonce', () => {
     const r = coinbasePerceive(new Error('AA25 Invalid account nonce'));
     expect(r).not.toBeNull();
-    expect(r!.category).toBe('signature');
+    expect(r!.category).toBe('nonce');
+    expect(r!.code).toBe('nonce-mismatch');
   });
 
   it('classifies EXECUTION_REVERTED', () => {
