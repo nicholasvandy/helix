@@ -52,7 +52,6 @@
     "url": "https://github.com/adrianhihi/helix/issues"
   },
   "dependencies": {
-    "@vial/runtime": "file:../../../vialos-runtime/packages/runtime",
     "better-sqlite3": "^11.0.0",
     "viem": "^2.47.5",
     "zod": "^4.3.6"

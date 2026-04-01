@@ -15,7 +15,6 @@ import { defaultAdapters } from './platforms/index.js';
 import type { HelixMode } from './engine/types.js';
 import { GeneDream } from './engine/dream.js';
 import { getSchemaVersion, needsMigration, CURRENT_SCHEMA_VERSION } from './engine/migrations.js';
-import { GeneMap as VialGeneMap, PCEC as VialPCEC, GeneDream as VialGeneDream } from '@vial/runtime';
 
 function mapStrategyToAction(strategy: string): string {
   const m: Record<string, string> = {
@@ -65,11 +64,6 @@ export function createApiServer(opts: ApiServerOptions = {}) {
   const dream = new GeneDream(geneMap, {
     onDream: (e) => { if (e.stage === 'complete') console.log(`[helix] Dream: ${JSON.stringify(e.stats)}`); },
   });
-
-  // VialOS Runtime — PCEC + Gene Map for /heal endpoint
-  const vialGeneMapPath = geneMapPath === ':memory:' ? ':memory:' : geneMapPath.replace(/\.db$/, '-vial-genes.db');
-  const vialGeneMap = new VialGeneMap(vialGeneMapPath);
-  const vialPcec = new VialPCEC({ geneMap: vialGeneMap, maxRetries: 3 });
 
   // Gene Collector database (shares the same SQLite file)
   const collectorDb = geneMap.database;
@@ -194,53 +188,14 @@ export function createApiServer(opts: ApiServerOptions = {}) {
         const { transaction, error: errorMsg, context: ctx } = body;
         if (!transaction || !errorMsg) return json(res, { error: 'transaction and error fields required' }, 400);
 
-        const sessionId = (req.headers['x-session-id'] as string) ?? crypto.randomUUID();
-
-        const vialResult = await vialPcec.repair(
-          {
-            errorType: errorMsg,
-            errorMessage: errorMsg,
-            toolName: 'eth_sendTransaction',
-            sessionId,
-            turnCount: 1,
-          },
-          async (strategy: string, params: Record<string, unknown>) => {
-            const err = new Error(errorMsg);
-            const result = await engine.repair(err, { ...ctx, platform: ctx?.platform || 'coinbase', vialStrategy: strategy });
-            const repaired = {
-              ...transaction,
-              ...(result.commitOverrides ?? {}),
-            };
-            return {
-              success: !!(result.winner || result.gene),
-              output: JSON.stringify({
-                repaired,
-                diagnosis: result.failure?.code ?? 'unknown',
-                strategy: result.winner?.strategy ?? result.gene?.strategy ?? strategy,
-                confidence: result.winner?.successProbability ?? 0.5,
-              }),
-            };
-          }
-        );
-
-        // Trigger Gene Dream if enough capsules accumulated
-        if (vialGeneMap.shouldDream(50)) {
-          const vialDream = new VialGeneDream(vialGeneMap);
-          vialDream.run().then((results: unknown) => console.log('[Dream]', results)).catch(() => {});
-        }
-
-        // Build response from the last capsule's recorded output
-        const capsules = vialGeneMap.getRecentCapsules(1);
-        const repairOutput = capsules.length > 0
-          ? JSON.parse(capsules[0].output)
-          : { repaired: transaction, diagnosis: 'unknown', strategy: 'unknown', confidence: 0 };
-
+        const err = new Error(errorMsg);
+        const result = await engine.repair(err, { ...ctx, platform: ctx?.platform || 'coinbase' });
+        const strategy = result.winner?.strategy ?? result.gene?.strategy ?? 'unknown';
         return json(res, {
-          ...repairOutput,
-          success: vialResult.success,
-          vialStrategy: vialResult.finalStrategy,
-          vialAttempts: vialResult.attempts,
-          vialEscalated: vialResult.escalated,
+          repaired: { ...transaction, ...(result.commitOverrides ?? {}) },
+          diagnosis: result.failure?.code ?? 'unknown',
+          strategy,
+          confidence: result.winner?.successProbability ?? 0.5,
         });
       } catch (e: any) {
         return json(res, { error: e.message }, 500);
@@ -295,22 +250,14 @@ export function createApiServer(opts: ApiServerOptions = {}) {
       return res.end(JSON.stringify({ totalGenes, topPatterns, successRate: totalAttempts > 0 ? Math.round(totalSuccess / totalAttempts * 100) / 100 : 1 }));
     }
 
-    // GET /vial/gene-map — VialOS Gene Map stats
+    // GET /vial/gene-map — alias for /gene-map
     if (path === '/vial/gene-map' && req.method === 'GET') {
-      const genes = vialGeneMap.list();
+      const genes = geneMap.list();
       const totalGenes = genes.length;
-      const topPatterns = genes.slice(0, 10).map(g => ({
-        code: g.failureCode,
-        category: g.category,
-        strategy: g.strategy,
-        qValue: g.qValue,
-        successCount: g.successCount,
-        failureCount: g.failureCount,
-      }));
-      const totalSuccess = genes.reduce((s, g) => s + (g.successCount || 0), 0);
-      const totalAttempts = totalSuccess + genes.reduce((s, g) => s + (g.failureCount || 0), 0);
-      const successRate = totalAttempts > 0 ? Math.round(totalSuccess / totalAttempts * 100) / 100 : 1;
-      return json(res, { totalGenes, topPatterns, successRate });
+      const topPatterns = genes.slice(0, 10).map((g: any) => ({ code: g.failureCode, category: g.category, strategy: g.strategy, qValue: g.qValue, successCount: g.successCount }));
+      const totalSuccess = genes.reduce((s: number, g: any) => s + (g.successCount || 0), 0);
+      const totalAttempts = totalSuccess + genes.reduce((s: number, g: any) => s + (g.consecutiveFailures || 0), 0);
+      return json(res, { totalGenes, topPatterns, successRate: totalAttempts > 0 ? Math.round(totalSuccess / totalAttempts * 100) / 100 : 1 });
     }
 
     // GET / — welcome
@@ -824,12 +771,10 @@ export function createApiServer(opts: ApiServerOptions = {}) {
     }),
     stop: () => new Promise<void>((resolve) => {
       geneMap.close();
-      vialGeneMap.close();
       server.close(() => resolve());
     }),
     server,
     engine,
     geneMap,
-    vialGeneMap,
   };
 }
