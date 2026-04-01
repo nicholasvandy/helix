@@ -131,7 +131,7 @@ describe('PCEC transition tracking', () => {
     await engine.repair(new Error('HTTP 429 rate limited'));
 
     // A link should exist from nonce error to rate-limit error
-    const links = gm.getLinks('verification-failed', 'signature');
+    const links = gm.getLinks('nonce-mismatch', 'nonce');
     expect(links.length).toBeGreaterThanOrEqual(1);
 
     gm.close();

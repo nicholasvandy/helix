@@ -110,15 +110,15 @@ describe('matchErrorSignature', () => {
   it('matches nonce mismatch', () => {
     const match = matchErrorSignature('nonce mismatch detected');
     expect(match).not.toBeNull();
-    expect(match!.failureCode).toBe('verification-failed');
-    expect(match!.failureCategory).toBe('signature');
+    expect(match!.failureCode).toBe('nonce-mismatch');
+    expect(match!.failureCategory).toBe('nonce');
     expect(match!.similarity).toBeGreaterThanOrEqual(0.5);
   });
 
   it('matches AA25 nonce error', () => {
     const match = matchErrorSignature('AA25 nonce too low');
     expect(match).not.toBeNull();
-    expect(match!.failureCode).toBe('verification-failed');
+    expect(match!.failureCode).toBe('nonce-mismatch');
   });
 
   it('matches insufficient balance', () => {

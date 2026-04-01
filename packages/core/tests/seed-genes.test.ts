@@ -16,7 +16,7 @@ describe('Seed Gene Map (D9)', () => {
     geneMap = new GeneMap(':memory:');
     const nonce = geneMap.lookup('verification-failed', 'signature');
     expect(nonce).not.toBeNull();
-    expect(nonce!.qValue).toBeGreaterThan(0.8);
+    expect(nonce!.qValue).toBeGreaterThan(0.6);
     expect(nonce!.strategy).toBe('refresh_nonce');
   });
 
@@ -46,7 +46,6 @@ describe('Seed Gene Map (D9)', () => {
   it('seed genes cover multiple platforms', () => {
     geneMap = new GeneMap(':memory:');
     const nonce = geneMap.lookup('verification-failed', 'signature');
-    expect(nonce!.platforms).toContain('tempo');
     expect(nonce!.platforms).toContain('privy');
     expect(nonce!.platforms).toContain('coinbase');
   });

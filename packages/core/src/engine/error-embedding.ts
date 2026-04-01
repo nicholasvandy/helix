@@ -65,8 +65,8 @@ export function tokenSimilarity(messageTokens: string[], signature: ErrorSignatu
 
 let _signatures: ErrorSignature[] = [
   // Nonce
-  { tokens: ['nonce', 'mismatch'], failureCode: 'verification-failed', failureCategory: 'signature' },
-  { tokens: ['aa25', 'nonce'], weights: [3, 2], failureCode: 'verification-failed', failureCategory: 'signature' },
+  { tokens: ['nonce', 'mismatch'], failureCode: 'nonce-mismatch', failureCategory: 'nonce' },
+  { tokens: ['aa25', 'nonce'], weights: [3, 2], failureCode: 'nonce-mismatch', failureCategory: 'nonce' },
 
   // Balance
   { tokens: ['insufficient', 'funds'], failureCode: 'payment-insufficient', failureCategory: 'balance' },

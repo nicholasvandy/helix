@@ -61,6 +61,9 @@ export function coinbasePerceive(error: Error, _context?: Record<string, unknown
   if (msg.includes('GAS_ESTIMATION_ERROR') || msg.includes('-32004') || msg.includes('Gas estimation failed'))
     return { code: 'gas-estimation-failed', category: 'gas', severity: 'high', platform, details: msg, timestamp: Date.now() };
 
+  if (msg.includes('nonce mismatch') || msg.includes('nonce too low') || msg.includes('nonce desync'))
+    return { code: 'nonce-mismatch', category: 'nonce', severity: 'high', platform, details: msg, timestamp: Date.now() };
+
   if (msg.includes('AA25') || msg.includes('Invalid account nonce'))
     return { code: 'verification-failed', category: 'signature', severity: 'high', platform, details: msg, timestamp: Date.now() };
 
