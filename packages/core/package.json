@@ -1,7 +1,7 @@
 {
   "name": "@helix-agent/core",
-  "version": "2.6.0",
-  "description": "Self-healing infrastructure for AI agent payments. Auto-repairs payment failures across Tempo, Privy, Stripe, and any HTTP service.",
+  "version": "2.7.0",
+  "description": "Agent payment intelligence — predict costs, optimize execution, fix failures. Powered by VialOS Runtime.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,20 +28,26 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
-    "agent",
-    "payments",
+    "helix",
+    "vialos",
+    "ai-agent",
     "self-healing",
+    "payment",
     "pcec",
     "gene-map",
+    "agent-reliability",
     "mpp",
-    "tempo",
-    "privy",
-    "stripe",
-    "error-recovery",
-    "ai-agent",
-    "machine-payments"
+    "coinbase",
+    "crypto",
+    "budget-intelligence",
+    "agent-payment"
   ],
-  "author": "Helix Contributors",
+  "vialos": {
+    "compatibility": "0.3.x",
+    "engine": "pcec-v6",
+    "role": "vertical-product"
+  },
+  "author": "Adrian Bai",
   "license": "MIT",
   "repository": {
     "type": "git",
