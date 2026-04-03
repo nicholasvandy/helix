@@ -14,7 +14,7 @@ export interface Migration {
   up: (db: Database.Database) => void;
 }
 
-export const CURRENT_SCHEMA_VERSION = 12;
+export const CURRENT_SCHEMA_VERSION = 13;
 
 export const migrations: Migration[] = [
   {
@@ -119,6 +119,13 @@ export const migrations: Migration[] = [
     description: 'LLM Prompt Optimization — classification tracking (Sprint V2)',
     up: (db) => {
       db.exec(`CREATE TABLE IF NOT EXISTS llm_classifications (id INTEGER PRIMARY KEY AUTOINCREMENT, error_message TEXT NOT NULL, predicted_code TEXT NOT NULL, predicted_category TEXT NOT NULL, predicted_strategy TEXT NOT NULL, actual_outcome TEXT DEFAULT 'unknown', repair_succeeded INTEGER, recorded_at INTEGER DEFAULT (unixepoch()))`);
+    },
+  },
+  {
+    version: 13,
+    description: 'Token cost tracking — capsules table for API proxy data capture',
+    up: (db) => {
+      db.exec(`CREATE TABLE IF NOT EXISTS capsules (id TEXT PRIMARY KEY, session_id TEXT, tool_name TEXT, input TEXT, output TEXT, success INTEGER DEFAULT 1, error_type TEXT, repair_strategy TEXT, duration_ms INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), task_type TEXT, token_cost_usd REAL, input_tokens INTEGER, output_tokens INTEGER, model TEXT, num_api_calls INTEGER)`);
     },
   },
 ];
