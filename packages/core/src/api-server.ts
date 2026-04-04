@@ -300,8 +300,32 @@ export function createApiServer(opts: ApiServerOptions = {}) {
           adapters: ['coinbase', 'tempo', 'privy', 'generic', 'api'],
         },
         geneMap: { schemaVersion: CURRENT_SCHEMA_VERSION, totalGenes: health.totalGenes, avgQValue: health.avgQValue },
-        links: { dashboard: '/dashboard', geneMap: '/vial/gene-map', health: '/health' },
+        budget: { endpoint: '/vial/budget/estimate?task=<type>', endpoints: ['/vial/budget/estimate', '/vial/budget/estimates', '/vial/budget/summary'] },
+        links: { dashboard: '/dashboard', geneMap: '/vial/gene-map', health: '/health', budget: '/vial/budget/summary' },
       });
+    }
+
+    // GET /vial/budget/estimate?task=<type> — predict cost (beta only)
+    if (path === '/vial/budget/estimate' && req.method === 'GET') {
+      if (!betaEnabled) return json(res, { error: 'Beta mode not enabled.' }, 404);
+      const task = url.searchParams.get('task');
+      if (!task) return json(res, { error: 'Missing ?task= parameter' }, 400);
+      const { BudgetPredictor } = await import('./engine/budget-predictor.js');
+      return json(res, new BudgetPredictor(geneMap).estimate(task));
+    }
+
+    // GET /vial/budget/estimates — all task type estimates (beta only)
+    if (path === '/vial/budget/estimates' && req.method === 'GET') {
+      if (!betaEnabled) return json(res, { error: 'Beta mode not enabled.' }, 404);
+      const { BudgetPredictor } = await import('./engine/budget-predictor.js');
+      return json(res, { estimates: new BudgetPredictor(geneMap).estimateAll() });
+    }
+
+    // GET /vial/budget/summary — overall cost summary (beta only)
+    if (path === '/vial/budget/summary' && req.method === 'GET') {
+      if (!betaEnabled) return json(res, { error: 'Beta mode not enabled.' }, 404);
+      const { BudgetPredictor } = await import('./engine/budget-predictor.js');
+      return json(res, new BudgetPredictor(geneMap).summary());
     }
 
     // GET /vial/gene-map — VialOS Gene Map stats
