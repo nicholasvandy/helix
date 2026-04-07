@@ -117,7 +117,20 @@ async function main() {
 
   console.log(`\nx402 Reliability Study v2\nMode: ${mode.toUpperCase()} | Duration: ${hours}h | Interval: ${TX_INTERVAL_MS / 1000}s\nExpected txs: ~${Math.floor(durationMs / TX_INTERVAL_MS)}\n`);
 
-  const wallet = await Wallet.create({ networkId: 'base-mainnet' });
+  // Persist wallet: create once → save seed, then reload on subsequent runs
+  const seedFile = path.join(import.meta.dirname || '.', '../../x402-v2-results/wallet-seed.json');
+  fs.mkdirSync(path.dirname(seedFile), { recursive: true });
+  let wallet: InstanceType<typeof Wallet>;
+  if (fs.existsSync(seedFile)) {
+    const seedData = JSON.parse(fs.readFileSync(seedFile, 'utf-8'));
+    wallet = await Wallet.import(seedData);
+    console.log('Loaded existing CDP wallet from seed file');
+  } else {
+    wallet = await Wallet.create({ networkId: 'base-mainnet' });
+    const seedData = wallet.export();
+    fs.writeFileSync(seedFile, JSON.stringify(seedData, null, 2));
+    console.log(`Created new CDP wallet, seed saved to ${seedFile}`);
+  }
   const addr = await wallet.getDefaultAddress();
   console.log(`CDP Wallet: ${addr.getId()}\nBaseScan: https://basescan.org/address/${addr.getId()}`);
 
