@@ -72,15 +72,20 @@ async function sendOneTx(baseAccount: any, publicClient: any, index: number, mod
         result.gasEstimatePlusBuffer = ((est * 110n) / 100n).toString();
       } catch {}
 
-      // Send via CDP account
-      const txResult = await baseAccount.sendTransaction({ to: RECIPIENT as `0x${string}`, value: parseEther(amt) });
+      // Send via CDP account — transaction object nested under `transaction` key
+      const txResult = await baseAccount.sendTransaction({
+        transaction: {
+          to: RECIPIENT as `0x${string}`,
+          value: parseEther(amt),
+        },
+      });
       result.txHash = txResult.transactionHash;
       result.basescanUrl = result.txHash ? `https://basescan.org/tx/${result.txHash}` : null;
 
-      // Wait for receipt
+      // Wait for receipt via public client
       if (result.txHash) {
         try {
-          const receipt = await baseAccount.waitForTransactionReceipt(txResult);
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: result.txHash as `0x${string}` });
           if (receipt) {
             result.gasUsed = receipt.gasUsed?.toString() ?? null;
             result.gasPrice = receipt.effectiveGasPrice?.toString() ?? null;
