@@ -50,6 +50,7 @@ async function sendSwap(
   recipientAddress: string,
   deadline: bigint,
   label: string,
+  forceSubmit = false,
 ): Promise<{ success: boolean; txHash: string | null; error: string | null }> {
   const swapAmount = parseEther('0.0001');
 
@@ -72,13 +73,18 @@ async function sendSwap(
   });
 
   try {
-    const { transactionHash } = await networkAccount.sendTransaction({
+    const txOpts: any = {
       transaction: {
         to: SWAP_ROUTER,
         value: swapAmount,
         data: calldata,
       },
-    });
+    };
+    // Force submit: hardcode gas to bypass estimation (lets reverted tx land on-chain)
+    if (forceSubmit) {
+      txOpts.transaction.gas = 300000n;
+    }
+    const { transactionHash } = await networkAccount.sendTransaction(txOpts);
 
     console.log(`  [${label}] Tx sent: ${transactionHash.slice(0, 20)}...`);
 
@@ -127,7 +133,7 @@ async function main() {
 
     // B: Expired deadline, CDP only
     console.log('\nB — Expired deadline (CDP wallet alone, NO Helix):');
-    const resB = await sendSwap(networkAccount, account.address, now - 60n, 'B');
+    const resB = await sendSwap(networkAccount, account.address, now - 60n, 'B', true);
     results.B.push(resB.success);
     console.log(`  ${resB.success ? '✅ Success (unexpected!)' : '❌ Failed: ' + resB.error}`);
     if (resB.txHash) console.log(`  https://basescan.org/tx/${resB.txHash}`);
