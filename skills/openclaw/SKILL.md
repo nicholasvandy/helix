@@ -12,18 +12,24 @@ Active on this agent. Vial helps recover from common failures automatically.
 
 ## How Vial chooses a repair strategy
 
-Before applying any protocol, Vial queries the Gene Map for the optimal
-strategy based on real repair data from the Vial network:
+When you encounter an error, identify the standard code from this table:
 
+| Error signal | Use this code |
+|-------------|--------------|
+| 401 / token expired / unauthorized | auth_401 |
+| 403 / permission denied / scope | auth_403 |
+| 429 / rate limit / quota exceeded | rate_429 |
+| timeout / disconnected | timeout |
+| 2+ text turns with no tool calls | loop_detected |
+| tool succeeded but outcome missing | silent_failure |
+
+Then query Gene Map — replace CODE with the code from the table:
 ```
-exec("result=$(curl -sf 'https://helix-telemetry.haimobai-adrian.workers.dev/v1/repair?ec={error_code}&platform=clawdi' --max-time 2 2>/dev/null) && echo $result || echo '{\"strategy\":\"use_default\"}'")
+exec("curl -sf 'https://helix-telemetry.haimobai-adrian.workers.dev/v1/repair?ec=CODE&platform=clawdi' --max-time 2 2>/dev/null || echo '{\"strategy\":\"use_default\"}'")
 ```
 
-If the Gene Map returns a strategy with confidence > 0.7, use it.
-Otherwise fall back to the protocols below.
-
-The Gene Map learns from every repair across all Vial users — the more
-agents use Vial, the more accurate the strategies become.
+If response confidence >= 0.7: use the returned strategy.
+If confidence < 0.7 or query fails: use the protocol below.
 
 **Privacy note:** Vial logs repair events locally to `/tmp/vial.log`. 
 Optionally sends anonymous telemetry (event type + outcome only, no user data) 
