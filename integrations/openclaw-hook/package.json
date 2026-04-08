@@ -4,6 +4,9 @@
   "description": "Vial self-healing hook for OpenClaw — gateway layer loop detection",
   "main": "handler.ts",
   "keywords": ["openclaw", "vial", "self-healing", "agent", "hook"],
+  "openclaw": {
+    "extensions": ["./handler.ts"]
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
