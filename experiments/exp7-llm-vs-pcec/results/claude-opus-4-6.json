@@ -1,0 +1,181 @@
+{
+  "experiment": "Experiment 7 \u2014 LLM vs PCEC Error Classification",
+  "date": "April 2026",
+  "llm_results": {
+    "model": "claude-opus-4-6",
+    "timestamp": "2026-04-08T22:20:53.580851",
+    "total": 10,
+    "correct": 0,
+    "accuracy": 0.0,
+    "results": [
+      {
+        "id": "E01",
+        "raw_message": "execution reverted: Transaction too old",
+        "correct_class": "expired_deadline",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E02",
+        "raw_message": "execution reverted: Too little received",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E03",
+        "raw_message": "execution reverted",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E04",
+        "raw_message": "ERC20: transfer amount exceeds allowance",
+        "correct_class": "missing_allowance",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E05",
+        "raw_message": "execution reverted: STF",
+        "correct_class": "missing_allowance",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E06",
+        "raw_message": "execution reverted: SPL",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E07",
+        "raw_message": "nonce too low",
+        "correct_class": "nonce_conflict",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E08",
+        "raw_message": "replacement transaction underpriced",
+        "correct_class": "nonce_conflict",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E09",
+        "raw_message": "execution reverted: UniswapV3Pool: SPL",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E10",
+        "raw_message": "execution reverted: UniswapV3: LOK",
+        "correct_class": "reentrancy_lock",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      }
+    ],
+    "failures": [
+      {
+        "id": "E01",
+        "raw_message": "execution reverted: Transaction too old",
+        "correct_class": "expired_deadline",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E02",
+        "raw_message": "execution reverted: Too little received",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E03",
+        "raw_message": "execution reverted",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E04",
+        "raw_message": "ERC20: transfer amount exceeds allowance",
+        "correct_class": "missing_allowance",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E05",
+        "raw_message": "execution reverted: STF",
+        "correct_class": "missing_allowance",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E06",
+        "raw_message": "execution reverted: SPL",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E07",
+        "raw_message": "nonce too low",
+        "correct_class": "nonce_conflict",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E08",
+        "raw_message": "replacement transaction underpriced",
+        "correct_class": "nonce_conflict",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E09",
+        "raw_message": "execution reverted: UniswapV3Pool: SPL",
+        "correct_class": "slippage_too_tight",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      },
+      {
+        "id": "E10",
+        "raw_message": "execution reverted: UniswapV3: LOK",
+        "correct_class": "reentrancy_lock",
+        "llm_class": "error",
+        "correct": false,
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\""
+      }
+    ]
+  },
+  "comparison": {
+    "llm_accuracy": 0.0,
+    "pcec_accuracy": 1.0,
+    "gap": 1.0,
+    "llm_model": "claude-opus-4-6"
+  }
+}

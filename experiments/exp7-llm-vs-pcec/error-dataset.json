@@ -1,0 +1,78 @@
+{
+  "errors": [
+    {
+      "id": "E01",
+      "raw_message": "execution reverted: Transaction too old",
+      "correct_class": "expired_deadline",
+      "correct_fix": "extend deadline by 5+ minutes before resubmit",
+      "source": "Experiment 2, Uniswap V3 on Base mainnet"
+    },
+    {
+      "id": "E02",
+      "raw_message": "execution reverted: Too little received",
+      "correct_class": "slippage_too_tight",
+      "correct_fix": "increase slippage tolerance / lower amountOutMinimum",
+      "source": "Experiment 3, Uniswap V3 on Base mainnet"
+    },
+    {
+      "id": "E03",
+      "raw_message": "execution reverted",
+      "correct_class": "slippage_too_tight",
+      "correct_fix": "increase slippage tolerance",
+      "source": "Experiment 3 variant — bare revert, no message",
+      "note": "This is the hardest case — LLMs default to guessing gas"
+    },
+    {
+      "id": "E04",
+      "raw_message": "ERC20: transfer amount exceeds allowance",
+      "correct_class": "missing_allowance",
+      "correct_fix": "send approve(router, amount) tx before swap",
+      "source": "Experiment 6, USDC on Base mainnet"
+    },
+    {
+      "id": "E05",
+      "raw_message": "execution reverted: STF",
+      "correct_class": "missing_allowance",
+      "correct_fix": "send approve(router, amount) tx before swap",
+      "source": "Experiment 6 variant — Uniswap STF code = SafeTransferFrom failed",
+      "note": "STF is opaque. LLMs rarely know this Uniswap error code"
+    },
+    {
+      "id": "E06",
+      "raw_message": "execution reverted: SPL",
+      "correct_class": "slippage_too_tight",
+      "correct_fix": "increase slippage tolerance",
+      "source": "Experiment 3 variant — Uniswap SPL code = Slippage",
+      "note": "SPL is opaque. LLMs rarely know this Uniswap error code"
+    },
+    {
+      "id": "E07",
+      "raw_message": "nonce too low",
+      "correct_class": "nonce_conflict",
+      "correct_fix": "fetch latest nonce and resubmit",
+      "source": "Experiment 5, EOA wallet on Base mainnet"
+    },
+    {
+      "id": "E08",
+      "raw_message": "replacement transaction underpriced",
+      "correct_class": "nonce_conflict",
+      "correct_fix": "bump gas price by 10%+ and resubmit with same nonce",
+      "source": "Experiment 5 variant"
+    },
+    {
+      "id": "E09",
+      "raw_message": "execution reverted: UniswapV3Pool: SPL",
+      "correct_class": "slippage_too_tight",
+      "correct_fix": "increase slippage tolerance / lower amountOutMinimum",
+      "source": "Experiment 3, full Uniswap error"
+    },
+    {
+      "id": "E10",
+      "raw_message": "execution reverted: UniswapV3: LOK",
+      "correct_class": "reentrancy_lock",
+      "correct_fix": "wait and retry — pool is locked during another swap",
+      "source": "Bonus: Uniswap lock error (LOK = locked)",
+      "note": "Almost no LLM knows this one"
+    }
+  ]
+}
