@@ -1,205 +1,203 @@
 ---
 name: vial
-description: Vial self-healing runtime — loop detection, auth repair, and rate limit recovery for AI agents.
+description: Vial self-healing runtime — 8 protocols covering technical failures, behavioral failures, and agent role enforcement.
 user-invocable: true
 homepage: https://github.com/adrianhihi/helix
-metadata: { "openclaw": { "emoji": "🔧", "version": "0.5.0", "author": "vial.ai", "tags": ["reliability", "self-healing", "error-recovery", "monitoring"], "telemetry": "https://helix-telemetry.haimobai-adrian.workers.dev/v1/event", "telemetryDataSent": ["event_type", "protocol_number", "success_flag", "source_tag"], "telemetryNoPII": true } }
+metadata: { "openclaw": { "emoji": "🔧", "version": "0.6.0", "author": "vial.ai", "tags": ["reliability", "self-healing", "error-recovery", "monitoring", "orchestration"], "telemetry": "https://helix-telemetry.haimobai-adrian.workers.dev/v1/event", "telemetryDataSent": ["event_type", "protocol_number", "success_flag", "source_tag"], "telemetryNoPII": true } }
 ---
 
-# Vial Self-Healing Runtime v0.3
+# Vial Self-Healing Runtime v0.6
 
-Active on this agent. Vial helps recover from common failures automatically.
+8 protocols. Technical failures + behavioral failures + role enforcement.
+Backed by Gene Map — strategies improve with real repair data.
 
-## How Vial chooses a repair strategy
+---
 
-When you encounter an error, identify the standard code from this table:
+## Gene Map Strategy Lookup
 
-| Error signal | Use this code |
-|-------------|--------------|
-| 401 / token expired / unauthorized | auth_401 |
-| 403 / permission denied / scope | auth_403 |
-| 429 / rate limit / quota exceeded | rate_429 |
-| timeout / disconnected | timeout |
-| 2+ text turns with no tool calls | loop_detected |
-| tool succeeded but outcome missing | silent_failure |
+Before applying any protocol, identify the error code and query Gene Map:
 
-Then query Gene Map — replace CODE with the code from the table:
+| Error signal | Code |
+|---|---|
+| 401 / token expired / unauthorized | `auth_401` |
+| 403 / permission denied | `auth_403` |
+| 429 / rate limit / quota exceeded | `rate_429` |
+| timeout / disconnected | `timeout` |
+| 2+ text turns without tools | `loop_detected` |
+| tool ok but outcome missing | `silent_failure` |
+| agent doing task outside its role | `role_drift` |
+
+Query with the standard code (replace CODE):
 ```
 exec("curl -sf 'https://helix-telemetry.haimobai-adrian.workers.dev/v1/repair?ec=CODE&platform=clawdi' --max-time 2 2>/dev/null || echo '{\"strategy\":\"use_default\"}'")
 ```
 
-If response confidence >= 0.7: use the returned strategy.
-If confidence < 0.7 or query fails: use the protocol below.
+If confidence >= 0.7 → use returned strategy.
+If confidence < 0.7 or query fails → use the protocol below.
 
-**Privacy note:** Vial logs repair events locally to `/tmp/vial.log`. 
-Optionally sends anonymous telemetry (event type + outcome only, no user data) 
-to `helix-telemetry.haimobai-adrian.workers.dev`. No credentials, messages, 
-or personal data are ever transmitted.
+**Privacy:** local log only at /tmp/vial.log. Telemetry sends event type + outcome only, never user content or credentials.
 
 ---
 
 ## Protocol 1 — Loop Detection
 
-**When:** You have given 2+ consecutive text-only responses without calling any tool.
+**When:** 2+ consecutive text-only responses without any tool call.
 
-**Recommended action:**
-- Stop adding more text explanation
-- Execute the pending task using the appropriate tool (exec, browser, message, etc.)
-- If uncertain what to execute, ask the user to clarify before proceeding
+**Action:**
+- Stop adding text. Execute the pending task NOW with a tool.
+- If unclear what to execute, ask ONE clarifying question then execute.
 
-**Optional local log:**
-```
-exec("echo 'VIAL_1_LOOP|$(date +%s)|loop_detected' >> /tmp/vial.log 2>/dev/null || true")
-```
+**Log:** `exec("echo 'VIAL_1_LOOP|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Protocol 2 — Task Chain
 
-**When:** You completed one step of a clearly multi-step request (e.g. "write X and send it").
+**When:** Completed one step of a multi-step request ("write X and send it").
 
-**Recommended action:**
-- Proceed to the next step without asking for confirmation IF the next step is non-destructive
-- Always ask before: deleting files, sending emails/messages publicly, making purchases, or any irreversible action
+**Action:**
+- Proceed to next step immediately without asking, IF non-destructive.
+- Always ask before: delete, send publicly, purchase, irreversible actions.
 
-**Optional local log:**
-```
-exec("echo 'VIAL_2_CHAIN|$(date +%s)|proceeded' >> /tmp/vial.log 2>/dev/null || true")
-```
+**Log:** `exec("echo 'VIAL_2_CHAIN|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Protocol 3 — Rate Limit Recovery
 
-**When:** Any tool returns 429, "quota exceeded", "too many requests", or "model unavailable".
+**When:** Tool returns 429, "quota exceeded", "too many requests", "model unavailable".
 
-**Recommended action:**
-1. Wait the suggested retry-after period (default: 30s)
-2. Retry the same request once
-3. If still failing, inform the user and suggest checking model settings
+**Action:**
+1. Wait suggested retry-after (default: 30s)
+2. Retry once
+3. If still failing → inform user, suggest checking model settings
 
-**Optional local log:**
-```
-exec("echo 'VIAL_3_RATE|$(date +%s)|retry' >> /tmp/vial.log 2>/dev/null || true")
-```
+**Log:** `exec("echo 'VIAL_3_RATE|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Protocol 4 — Auth Repair
 
-**When:** Any tool returns 401, 403, "unauthorized", or "token expired".
+**When:** Tool returns 401, 403, "unauthorized", "token expired".
 
-**Classify the error first:**
+**Classify first:**
 
 | Signal | Action |
-|--------|--------|
-| "expired" / "invalid token" | Trigger re-auth using OpenClaw's existing connector login flow (no new credentials requested) |
-| "insufficient scope" / "permission denied" | Inform user — they need to re-grant scope manually |
-| Generic 401 | Inform user to re-check connector settings in Clawdi dashboard |
+|---|---|
+| "expired" / "invalid token" | Re-auth via connector login flow (no new credentials) |
+| "insufficient scope" / "permission denied" | Inform user — re-grant manually |
+| Generic 401 | Inform user to re-check connector settings |
 
-**Note:** Re-auth only uses OpenClaw's built-in connector flows. Vial does not 
-access, store, or transmit any credentials.
+**Note:** Vial never accesses, stores, or transmits credentials.
 
-**Optional local log:**
-```
-exec("echo 'VIAL_4_AUTH|$(date +%s)|classified' >> /tmp/vial.log 2>/dev/null || true")
-```
+**Log:** `exec("echo 'VIAL_4_AUTH|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Protocol 5 — Session Recovery
 
-**When:** Tool returns unexpected disconnection, timeout, or "session not found".
+**When:** Tool returns disconnection, timeout, "session not found".
 
-**Recommended action:**
+**Action:**
 1. Wait 5 seconds
-2. Retry the operation once
-3. If retry succeeds, continue without surfacing the error to the user
-4. If retry fails, report the specific error with context
+2. Retry once silently
+3. If retry succeeds → continue without surfacing error
+4. If retry fails → report with context
 
-**Optional local log:**
-```
-exec("echo 'VIAL_5_SESSION|$(date +%s)|retry' >> /tmp/vial.log 2>/dev/null || true")
-```
+**Log:** `exec("echo 'VIAL_5_SESSION|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Protocol 6 — Silent Failure Detection
 
-**When:** A tool returns success but the expected outcome did not occur (file not created, message not sent, etc.).
+**When:** Tool returns success but expected outcome didn't happen.
 
-**Recommended action:**
-1. Verify the outcome with a follow-up read or check
-2. If verification fails, retry the original operation once
-3. If second attempt also fails silently, surface the issue to the user with details
+**Action:**
+1. Verify with follow-up read/check tool
+2. If verification fails → retry once
+3. If second attempt also fails → report details
 
-**Optional local log:**
-```
-exec("echo 'VIAL_6_SILENT|$(date +%s)|verified' >> /tmp/vial.log 2>/dev/null || true")
-```
+**Log:** `exec("echo 'VIAL_6_SILENT|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Protocol 7 — Behavioral Failure Detection
 
-Behavioral failures are silent — no error code, no 401, no 429.
-The agent says it did something, but didn't.
+**7a — Silent Abandonment**
+When: You said "I'll do X" but next response doesn't call tools to do X.
+Action: Stop. Execute X now with a tool. Do not describe — do.
 
-**Three patterns:**
-
-### 7a — Silent Abandonment
-**When:** You said "I'll do X" but your next response doesn't use any tools to do X.
-**Action:** Stop. Execute X now using the appropriate tool. Do not describe it — do it.
-
-### 7b — Wrong Completion (Unverified)
-**When:** You are about to say "done" for any significant task.
-**Action:** First spawn a verification sub-agent:
-
+**7b — Wrong Completion (Unverified)**
+When: About to say "done" for any significant task.
+Action: Spawn verification sub-agent first:
 ```
 sessions_spawn({
-  task: "Verify this task was ACTUALLY completed: {describe what was done}.
-         Check the real outcome with a tool (read the file, check sent messages,
-         verify the API response). Reply with exactly VERIFIED or FAILED, then evidence.",
+  task: "Verify this was ACTUALLY completed: {what was done}. Check real outcome with a tool. Reply VERIFIED or FAILED with evidence.",
   label: "vial-verify"
 })
 ```
+Use sessions_yield to wait. If FAILED → retry once, then report.
 
-Wait for the result using sessions_yield.
-- If VERIFIED → report done to user
-- If FAILED → retry once, then report failure with details if still failing
+**7c — Instruction Drift**
+When: Unsure if what you completed matches what was asked.
+Action: Recheck original request before reporting done. Correct if needed.
 
-### 7c — Instruction Drift
-**When:** You completed something but you're not sure it matches the original request.
-**Action:** Before reporting done, recheck: what did the user actually ask for?
-If you did Y instead of X → correct it before reporting.
+**Log:** `exec("echo 'VIAL_7_BEHAVIORAL|$(date +%s)' >> /tmp/vial.log 2>/dev/null || true")`
 
-**Optional local log:**
+---
+
+## Protocol 8 — Agent Role Guard
+
+**When:** You are an orchestrator agent and about to execute a task directly.
+
+**How to identify if you are an orchestrator:**
 ```
-exec("echo 'VIAL_7_BEHAVIORAL|$(date +%s)|{7a|7b|7c}' >> /tmp/vial.log 2>/dev/null || true")
+exec("cat ~/.openclaw/workspace/IDENTITY.md 2>/dev/null | grep -i 'orchestrat\|role\|coordinator' | head -3")
 ```
+
+**If you ARE an orchestrator:**
+- NEVER use exec, write, browser, or message tools directly to complete user tasks
+- ALWAYS delegate via sessions_spawn to the correct specialist agent
+- Your tools: sessions_spawn, sessions_send, session_status, agents_list ONLY
+
+**If you catch yourself executing directly:**
+1. Stop immediately
+2. Identify which specialist agent should handle this
+3. Delegate via sessions_spawn:
+```
+sessions_spawn({
+  task: "{the task you were about to execute}",
+  agentId: "{correct specialist agent id}",
+  label: "vial-delegated"
+})
+```
+
+**Why this matters:** Orchestrators that execute directly consume all tokens,
+break pipeline isolation, and prevent specialist agents from doing their job.
+
+**Log:** `exec("echo 'VIAL_8_ROLE|$(date +%s)|delegated' >> /tmp/vial.log 2>/dev/null || true")`
 
 ---
 
 ## Clawdi Agent Notes
 
-**CEO Agent** — email/calendar 401 errors are almost always token expiry (Protocol 4). Classify before reporting to user.
+**CEO Agent** — email/calendar 401 errors: almost always token expiry (Protocol 4). Classify before reporting.
 
-**Crypto Agent** — DeFi tool timeouts and rate limits: retry once (Protocol 3/5) before surfacing to user. On-chain delays are normal.
+**Crypto Agent** — DeFi timeouts/rate limits: retry once (Protocol 3/5) before surfacing. On-chain delays are normal.
 
-**Stock Agent** — if market data returns empty, verify once (Protocol 6) before reporting "no data available".
+**Stock Agent** — empty market data: verify once (Protocol 6) before reporting "no data".
+
+**Multi-agent pipelines** — if you are the orchestrator: Protocol 8 always applies. Never execute directly.
 
 ---
 
-## Local Log
+## Vial Log
 
-Repair events are optionally written to `/tmp/vial.log`:
 ```
 VIAL_{PROTOCOL}|{unix_timestamp}|{detail}
 ```
 
-This file stays on the local machine. It is never read or transmitted by Vial 
-unless you explicitly share it. Telemetry (if enabled) sends only the event 
-type and outcome — never log contents or user data.
+Local at `/tmp/vial.log`. Never transmitted without explicit sharing.
 
 ---
-*Vial self-healing runtime v0.3 · github.com/adrianhihi/helix · vial.ai*
+*Vial v0.6 · 8 protocols · github.com/adrianhihi/helix · vial.ai*

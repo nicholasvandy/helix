@@ -22,6 +22,9 @@ const BASELINE = {
   'task_chain':      { strategy: 'auto_proceed',     confidence: 0.80, description: 'Proceed to next step without confirmation' },
   'task_incomplete': { strategy: 'auto_proceed',     confidence: 0.80, description: 'Proceed to next step without confirmation' },
   'auth_error':      { strategy: 'token_refresh',    confidence: 0.80, description: 'Classify auth error and attempt re-auth' },
+  'role_drift':      { strategy: 'delegate_to_specialist', confidence: 0.90, description: 'Orchestrator executing directly — delegate via sessions_spawn' },
+  'behavioral_7a':   { strategy: 'execute_immediately',    confidence: 0.85, description: 'Silent abandonment — stop describing, execute now' },
+  'behavioral_7b':   { strategy: 'spawn_verification',     confidence: 0.88, description: 'Unverified completion — spawn verification sub-agent' },
 };
 
 export default {
@@ -42,7 +45,7 @@ export default {
       let geneData = null;
       try {
         const stored = await env.HELIX_TELEMETRY.get(kvKey, 'json');
-        if (stored && stored.total > 10) geneData = stored;
+        if (stored && stored.total > 3) geneData = stored;
       } catch {}
 
       const baseline = BASELINE[ec] || { strategy: 'log_and_inform', confidence: 0.50, description: 'Log the error and inform user with details' };

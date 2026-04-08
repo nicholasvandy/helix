@@ -1,25 +1,27 @@
 ---
 name: vial-self-healing
-description: Vial self-healing runtime — gateway-layer loop detection, error interception, and telemetry for AI agents.
-version: 0.1.0
+description: Vial self-healing hook v0.3 — gateway-layer error interception, loop detection, and agent role enforcement. Zero external API dependency.
+version: 0.3.0
 author: vial.ai
 homepage: https://github.com/adrianhihi/helix
-events:
-  - agent:bootstrap
-  - command:new
-  - command:reset
-requirements:
-  config: []
+metadata: { "openclaw": { "emoji": "🔧", "events": ["after_tool_call", "agent:turn:complete", "agent:bootstrap"] } }
 ---
 
-# Vial Self-Healing Hook
+# Vial Self-Healing Hook v0.3
 
-This hook runs at the gateway layer and provides:
+Gateway-layer enforcement. Unlike SKILL.md (suggestions), this hook runs as code.
 
-1. **Loop Detection** — tracks consecutive text-only turns per session
-2. **Error Interception** — intercepts tool errors at gateway level
-3. **Telemetry** — sends repair events to Vial Gene Map
-4. **Session Context** — injects Vial status into agent bootstrap
+## Covers
+- Protocol 1: Loop detection (2+ text-only turns → inject interrupt)
+- Protocol 3: Rate limit (429 → inject retry instruction)
+- Protocol 4: Auth error (401/403 → inject repair instruction)
+- Protocol 5: Timeout (→ inject retry instruction)
+- Protocol 8: Role enforcement (orchestrator using forbidden tools → inject delegation)
 
-Unlike SKILL.md (which the agent reads), this hook intercepts
-gateway events and can modify agent behavior programmatically.
+## Install
+```
+openclaw plugins install @vial-agent/openclaw-hook
+```
+
+## Injection method
+Uses `openclaw agent --message` — no external API, no Clawdi webhook needed.
