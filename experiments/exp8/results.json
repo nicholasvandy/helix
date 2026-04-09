@@ -1,0 +1,81 @@
+{
+  "experiment": "8 — On-Chain Wrong Fix vs Correct Fix",
+  "date": "2026-04-09T00:03:23.474Z",
+  "wallet": "0xeAc23C24e4EEFcd8bB507b4ffD5fCf7B4c7882AB",
+  "error_simulated": "E08 — replacement transaction underpriced",
+  "llm_model": "gpt-4o-mini",
+  "llm_classification": "insufficient_gas (WRONG)",
+  "llm_fix": "increase gas price by 20%",
+  "pcec_classification": "nonce_conflict (CORRECT)",
+  "pcec_fix": "fetch latest nonce and resubmit",
+  "rounds": [
+    {
+      "round": 1,
+      "llm": {
+        "success": false,
+        "txHash": null,
+        "error": "nonce has already been used (transaction=\"0x02f87282210582045f836ddd00836ddd0082520894d296c79ef6d4a048c80293386a58fa15c6e658a98609184e72a00080c001a0ace9bd3da5b024a30e888c2b20743bcfc772a7cabe357bb2d3e9",
+        "label": "LLM-WRONG",
+        "nonce": 1119
+      },
+      "pcec": {
+        "success": true,
+        "txHash": "0x960ef167a6385d5c3d69aff356016f8ef24f8d616ae7b4e5f93478b1986d104b",
+        "error": null,
+        "label": "PCEC-CORRECT",
+        "nonce": 1120,
+        "gasPrice": "0.006 gwei",
+        "gasUsed": 21000,
+        "blockNumber": 44451807,
+        "basescan": "https://basescan.org/tx/0x960ef167a6385d5c3d69aff356016f8ef24f8d616ae7b4e5f93478b1986d104b"
+      }
+    },
+    {
+      "round": 2,
+      "llm": {
+        "success": false,
+        "txHash": null,
+        "error": "nonce has already been used (transaction=\"0x02f872822105820460836ddd00836ddd0082520894d296c79ef6d4a048c80293386a58fa15c6e658a98609184e72a00080c001a0669de75eb327b651a4926b756b7f99fe00b1cb2af0856f2698eb",
+        "label": "LLM-WRONG",
+        "nonce": 1120
+      },
+      "pcec": {
+        "success": true,
+        "txHash": "0xb059b6f5def86f658365eaf43687388a4275db969d6efcc4edf2a2e5b418fd98",
+        "error": null,
+        "label": "PCEC-CORRECT",
+        "nonce": 1121,
+        "gasPrice": "0.006 gwei",
+        "gasUsed": 21000,
+        "blockNumber": 44451818,
+        "basescan": "https://basescan.org/tx/0xb059b6f5def86f658365eaf43687388a4275db969d6efcc4edf2a2e5b418fd98"
+      }
+    },
+    {
+      "round": 3,
+      "llm": {
+        "success": false,
+        "txHash": null,
+        "error": "nonce has already been used (transaction=\"0x02f872822105820461836ddd00836ddd0082520894d296c79ef6d4a048c80293386a58fa15c6e658a98609184e72a00080c080a0e685506544cf39421a6a93332c28f80e72c55d8d0d98814cc1f1",
+        "label": "LLM-WRONG",
+        "nonce": 1121
+      },
+      "pcec": {
+        "success": true,
+        "txHash": "0xdb20669c6a2d6d84d80139b6ddc72e8227d884b9660c2ec0007ec0d93fbddda3",
+        "error": null,
+        "label": "PCEC-CORRECT",
+        "nonce": 1122,
+        "gasPrice": "0.006 gwei",
+        "gasUsed": 21000,
+        "blockNumber": 44451827,
+        "basescan": "https://basescan.org/tx/0xdb20669c6a2d6d84d80139b6ddc72e8227d884b9660c2ec0007ec0d93fbddda3"
+      }
+    }
+  ],
+  "summary": {
+    "llm_success_rate": "0/3",
+    "pcec_success_rate": "3/3",
+    "conclusion": "Wrong classification → wrong fix → on-chain failure. Correct classification → correct fix → on-chain success."
+  }
+}
