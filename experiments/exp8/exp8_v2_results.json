@@ -1,0 +1,83 @@
+{
+  "experiment": "8v2 — On-Chain GPT-5.4 Wrong Fix vs PCEC Correct Fix",
+  "date": "2026-04-09T00:14:02.000Z",
+  "wallet": "0x5BCeA8A5A625f254662c1CD5d46d0a2Cf9e0E023",
+  "error_simulated": "E03 — bare \"execution reverted\" (slippage_too_tight)",
+  "llm_model": "gpt-5.4",
+  "pcec_engine": "PCEC v2.7 (deterministic pattern matching)",
+  "rounds": [
+    {
+      "round": 1,
+      "gpt54_response": {
+        "classification": "other",
+        "confidence": 0.18,
+        "fix": "Inspect the transaction receipt/logs or run a static call/simulation to get the exact revert reason, then correct the failing contract condition before resubmitting.",
+        "reasoning": "\"execution reverted\" alone is only a generic EVM revert message and does not identify a specific issue like deadline, slippage, allowance, nonce, gas, or reentrancy."
+      },
+      "gpt54_fix_applied": "GPT-5.4 classified as \"other\" — no actionable slippage fix applied. amountOutMinimum unchanged.",
+      "llm_tx": {
+        "success": false,
+        "txHash": "0xe5d40c2532b6eb275b758f685581ef3b210189ee91c59327be2b2b62201019ad",
+        "error": "Reverted on-chain",
+        "basescan": "https://basescan.org/tx/0xe5d40c2532b6eb275b758f685581ef3b210189ee91c59327be2b2b62201019ad"
+      },
+      "pcec_tx": {
+        "success": true,
+        "txHash": "0xddc1a700ffc21ae0892291305f4668a9fbc5810e710542febe16757cd166237e",
+        "error": null,
+        "basescan": "https://basescan.org/tx/0xddc1a700ffc21ae0892291305f4668a9fbc5810e710542febe16757cd166237e"
+      }
+    },
+    {
+      "round": 2,
+      "gpt54_response": {
+        "classification": "other",
+        "confidence": 0.18,
+        "fix": "Inspect the transaction receipt/logs or simulate the call to get the actual revert reason, then correct the specific failing parameter or precondition before resubmitting.",
+        "reasoning": "\"execution reverted\" is only a generic EVM failure message and does not by itself identify whether the issue is deadline, slippage, allowance, nonce, gas, or another contract-specific check."
+      },
+      "gpt54_fix_applied": "GPT-5.4 classified as \"other\" — no actionable slippage fix applied. amountOutMinimum unchanged.",
+      "llm_tx": {
+        "success": false,
+        "txHash": "0x486fbc04b066dc4f4f03bbdece728437262aa9b9c3d2836f4714ec5ad4a98f13",
+        "error": "Reverted on-chain",
+        "basescan": "https://basescan.org/tx/0x486fbc04b066dc4f4f03bbdece728437262aa9b9c3d2836f4714ec5ad4a98f13"
+      },
+      "pcec_tx": {
+        "success": true,
+        "txHash": "0xa9a54b34f356357b8d2fd2baa8168b5b683f6efb8c5630abd4982d5a70ee97bf",
+        "error": null,
+        "basescan": "https://basescan.org/tx/0xa9a54b34f356357b8d2fd2baa8168b5b683f6efb8c5630abd4982d5a70ee97bf"
+      }
+    },
+    {
+      "round": 3,
+      "gpt54_response": {
+        "classification": "other",
+        "confidence": 0.18,
+        "fix": "Inspect the transaction receipt or simulation trace to get the actual revert reason, then adjust the failing contract call accordingly; \"execution reverted\" alone is too generic to determine a specific fix.",
+        "reasoning": "The message only indicates the EVM reverted state changes and does not expose whether the cause was deadline, slippage, allowance, gas, nonce, or another contract-level require/revert condition."
+      },
+      "gpt54_fix_applied": "GPT-5.4 classified as \"other\" — no actionable slippage fix applied. amountOutMinimum unchanged.",
+      "llm_tx": {
+        "success": false,
+        "txHash": "0x74ad1b2eca95c375630b0c09189dcba41cb748f382a2997096b4856fb9c6df1c",
+        "error": "Reverted on-chain",
+        "basescan": "https://basescan.org/tx/0x74ad1b2eca95c375630b0c09189dcba41cb748f382a2997096b4856fb9c6df1c"
+      },
+      "pcec_tx": {
+        "success": true,
+        "txHash": "0x9d6470dc487bef09d17fbe58d6803e571ef0f81a9895fd40b624bb3731abc026",
+        "error": null,
+        "basescan": "https://basescan.org/tx/0x9d6470dc487bef09d17fbe58d6803e571ef0f81a9895fd40b624bb3731abc026"
+      }
+    }
+  ],
+  "summary": {
+    "gpt54_classifications": ["other", "other", "other"],
+    "gpt54_confidence": [0.18, 0.18, 0.18],
+    "gpt54_success_rate": "0/3",
+    "pcec_success_rate": "3/3",
+    "conclusion": "GPT-5.4 cannot classify bare \"execution reverted\" as slippage. PCEC pattern-matches it deterministically. All 6 transactions verifiable on BaseScan."
+  }
+}
